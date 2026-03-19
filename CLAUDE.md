@@ -8,9 +8,9 @@ control de entrevistas y colocación de candidatos en empresas cliente.
 
 ## Stack Tecnológico
 - **Frontend:** Next.js 14+ (App Router) con React 18+ y TypeScript
-- **Backend:** .NET 8 Web API con C#
+- **Backend:** .NET 10 Web API con C#
 - **Base de datos:** PostgreSQL 16+
-- **ORM:** Entity Framework Core 8
+- **ORM:** Entity Framework Core 10
 - **Autenticación:** JWT + Refresh Tokens
 - **CI/CD:** GitHub Actions
 - **Deploy:** Vercel (frontend) + Render (API + PostgreSQL)
@@ -45,7 +45,7 @@ bepro/
 ```
 
 ## Arquitectura
-- **Patrón:** Clean Architecture (Core → Infrastructure → API)
+- **Patrón:** Clean Architecture (Core → Infrastructure → API) con .NET 10
 - **API:** RESTful con versionado (v1, v2...)
 - **Frontend:** Server Components por defecto, Client Components cuando se necesite interactividad
 - **Autenticación:** JWT con roles y claims

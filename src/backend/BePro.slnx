@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="BePro.API/BePro.API.csproj" />
+  <Project Path="BePro.Core/BePro.Core.csproj" />
+  <Project Path="BePro.Infrastructure/BePro.Infrastructure.csproj" />
+  <Project Path="BePro.Tests/BePro.Tests.csproj" />
+</Solution>
