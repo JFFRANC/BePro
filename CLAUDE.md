@@ -9,7 +9,7 @@ control de entrevistas y colocación de candidatos en empresas cliente.
 ## Stack Tecnológico
 - **Frontend:** Next.js 14+ (App Router) con React 18+ y TypeScript
 - **Backend:** .NET 10 Web API con C#
-- **Base de datos:** PostgreSQL 16+
+- **Base de datos:** PostgreSQL 18
 - **ORM:** Entity Framework Core 10
 - **Autenticación:** JWT + Refresh Tokens
 - **CI/CD:** GitHub Actions
