@@ -28,9 +28,10 @@ public class TokenService : ITokenService
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim(ClaimTypes.Role, user.Role.ToString().ToLower().Replace("leadermanager", "leader_manager")),
+            new Claim(ClaimTypes.Role, user.Role.ToString().ToLower().Replace("accountexecutive", "account_executive")),
             new Claim("firstName", user.FirstName),
-            new Claim("lastName", user.LastName)
+            new Claim("lastName", user.LastName),
+            new Claim("isFreelancer", user.IsFreelancer.ToString().ToLower())
         };
 
         var token = new JwtSecurityToken(

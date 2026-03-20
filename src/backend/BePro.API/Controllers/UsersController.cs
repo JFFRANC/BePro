@@ -20,7 +20,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = "admin,leader_manager")]
+    [Authorize(Roles = "admin,manager")]
     public async Task<ActionResult<ApiResponse<List<UserDto>>>> GetAll()
     {
         var users = await _userService.GetAllAsync();
@@ -28,7 +28,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
-    [Authorize(Roles = "admin,leader_manager")]
+    [Authorize(Roles = "admin,manager")]
     public async Task<ActionResult<ApiResponse<UserDto>>> GetById(Guid id)
     {
         var user = await _userService.GetByIdAsync(id);

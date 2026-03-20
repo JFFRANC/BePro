@@ -1,0 +1,679 @@
+{
+	"info": {
+		"name": "BePro API",
+		"description": "Colección completa para validar el flujo de BePro: Auth → Usuarios → Clientes → Asignaciones → Candidatos → Colocaciones",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{ "key": "baseUrl", "value": "http://localhost:5145/api/v1" },
+		{ "key": "accessToken", "value": "" },
+		{ "key": "refreshToken", "value": "" },
+		{ "key": "adminId", "value": "" },
+		{ "key": "leaderId", "value": "" },
+		{ "key": "recruiterId", "value": "" },
+		{ "key": "freelancerId", "value": "" },
+		{ "key": "clientId", "value": "" },
+		{ "key": "candidateId", "value": "" },
+		{ "key": "placementId", "value": "" }
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{ "key": "token", "value": "{{accessToken}}", "type": "string" }
+		]
+	},
+	"item": [
+		{
+			"name": "1. Autenticación",
+			"item": [
+				{
+					"name": "1.1 Login Admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const res = pm.response.json();",
+									"if (res.success) {",
+									"    pm.collectionVariables.set('accessToken', res.data.accessToken);",
+									"    pm.collectionVariables.set('refreshToken', res.data.refreshToken);",
+									"    pm.collectionVariables.set('adminId', res.data.userId);",
+									"    pm.test('Login exitoso', () => pm.response.to.have.status(200));",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"admin@bepro.com\",\n    \"password\": \"Admin123!\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+					}
+				},
+				{
+					"name": "1.2 Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const res = pm.response.json();",
+									"if (res.success) {",
+									"    pm.collectionVariables.set('accessToken', res.data.accessToken);",
+									"    pm.collectionVariables.set('refreshToken', res.data.refreshToken);",
+									"    pm.test('Token renovado', () => pm.response.to.have.status(200));",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/auth/refresh-token", "host": ["{{baseUrl}}"], "path": ["auth", "refresh-token"] }
+					}
+				},
+				{
+					"name": "1.3 Mi perfil",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{baseUrl}}/users/me", "host": ["{{baseUrl}}"], "path": ["users", "me"] }
+					}
+				},
+				{
+					"name": "1.4 Logout",
+					"request": {
+						"method": "POST",
+						"url": { "raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth", "logout"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "2. Usuarios (Admin)",
+			"item": [
+				{
+					"name": "2.1 Crear Leader",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const res = pm.response.json();",
+									"if (res.success) {",
+									"    pm.collectionVariables.set('leaderId', res.data.id);",
+									"    pm.test('Leader creado', () => pm.response.to.have.status(201));",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"leader@bepro.com\",\n    \"password\": \"Leader123!\",\n    \"firstName\": \"María\",\n    \"lastName\": \"García\",\n    \"role\": 2\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] }
+					}
+				},
+				{
+					"name": "2.2 Crear Recruiter",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const res = pm.response.json();",
+									"if (res.success) {",
+									"    pm.collectionVariables.set('recruiterId', res.data.id);",
+									"    pm.test('Recruiter creado', () => pm.response.to.have.status(201));",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"recruiter@bepro.com\",\n    \"password\": \"Recruiter123!\",\n    \"firstName\": \"Carlos\",\n    \"lastName\": \"López\",\n    \"role\": 3\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] }
+					}
+				},
+				{
+					"name": "2.3 Crear Freelancer",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const res = pm.response.json();",
+									"if (res.success) {",
+									"    pm.collectionVariables.set('freelancerId', res.data.id);",
+									"    pm.test('Freelancer creado', () => pm.response.to.have.status(201));",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"freelancer@bepro.com\",\n    \"password\": \"Freelancer123!\",\n    \"firstName\": \"Ana\",\n    \"lastName\": \"Martínez\",\n    \"role\": 4\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] }
+					}
+				},
+				{
+					"name": "2.4 Listar usuarios",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] }
+					}
+				},
+				{
+					"name": "2.5 Obtener usuario por ID",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{baseUrl}}/users/{{leaderId}}", "host": ["{{baseUrl}}"], "path": ["users", "{{leaderId}}"] }
+					}
+				},
+				{
+					"name": "2.6 Actualizar usuario",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstName\": \"María Elena\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/users/{{leaderId}}", "host": ["{{baseUrl}}"], "path": ["users", "{{leaderId}}"] }
+					}
+				},
+				{
+					"name": "2.7 Desactivar usuario",
+					"request": {
+						"method": "DELETE",
+						"url": { "raw": "{{baseUrl}}/users/{{freelancerId}}", "host": ["{{baseUrl}}"], "path": ["users", "{{freelancerId}}"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "3. Clientes (Admin)",
+			"item": [
+				{
+					"name": "3.1 Crear cliente",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const res = pm.response.json();",
+									"if (res.success) {",
+									"    pm.collectionVariables.set('clientId', res.data.id);",
+									"    pm.test('Cliente creado', () => pm.response.to.have.status(201));",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Carta Mundi\",\n    \"contactInfo\": \"contacto@cartamundi.com | Tel: 555-0100\",\n    \"address\": \"Av. Industrial 450, CDMX\",\n    \"formConfig\": {\n        \"showInterviewTime\": true,\n        \"showPosition\": true,\n        \"showMunicipality\": true,\n        \"showAge\": true,\n        \"showShift\": true,\n        \"showPlant\": true,\n        \"showInterviewPoint\": true,\n        \"showComments\": true\n    }\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/clients", "host": ["{{baseUrl}}"], "path": ["clients"] }
+					}
+				},
+				{
+					"name": "3.2 Crear segundo cliente",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Cuprum CD MX\",\n    \"contactInfo\": \"rh@cuprum.com\",\n    \"address\": \"Parque Industrial Toluca, Edo. Méx.\",\n    \"formConfig\": {\n        \"showInterviewTime\": true,\n        \"showPosition\": true,\n        \"showMunicipality\": false,\n        \"showAge\": false,\n        \"showShift\": true,\n        \"showPlant\": false,\n        \"showInterviewPoint\": false,\n        \"showComments\": true\n    }\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/clients", "host": ["{{baseUrl}}"], "path": ["clients"] }
+					}
+				},
+				{
+					"name": "3.3 Listar clientes",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{baseUrl}}/clients", "host": ["{{baseUrl}}"], "path": ["clients"] }
+					}
+				},
+				{
+					"name": "3.4 Obtener cliente por ID",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{baseUrl}}/clients/{{clientId}}", "host": ["{{baseUrl}}"], "path": ["clients", "{{clientId}}"] }
+					}
+				},
+				{
+					"name": "3.5 Actualizar cliente",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"contactInfo\": \"rh@cartamundi.com.mx | Tel: 555-0200\",\n    \"formConfig\": {\n        \"showInterviewTime\": true,\n        \"showPosition\": true,\n        \"showMunicipality\": true,\n        \"showAge\": false,\n        \"showShift\": true,\n        \"showPlant\": true,\n        \"showInterviewPoint\": true,\n        \"showComments\": true\n    }\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/clients/{{clientId}}", "host": ["{{baseUrl}}"], "path": ["clients", "{{clientId}}"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "4. Asignaciones (Admin)",
+			"item": [
+				{
+					"name": "4.1 Asignar leader a cliente",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": \"{{leaderId}}\",\n    \"leaderId\": null\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/clients/{{clientId}}/assignments", "host": ["{{baseUrl}}"], "path": ["clients", "{{clientId}}", "assignments"] }
+					}
+				},
+				{
+					"name": "4.2 Asignar recruiter a cliente (bajo leader)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": \"{{recruiterId}}\",\n    \"leaderId\": \"{{leaderId}}\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/clients/{{clientId}}/assignments", "host": ["{{baseUrl}}"], "path": ["clients", "{{clientId}}", "assignments"] }
+					}
+				},
+				{
+					"name": "4.3 Asignar freelancer a cliente (bajo leader)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": \"{{freelancerId}}\",\n    \"leaderId\": \"{{leaderId}}\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/clients/{{clientId}}/assignments", "host": ["{{baseUrl}}"], "path": ["clients", "{{clientId}}", "assignments"] }
+					}
+				},
+				{
+					"name": "4.4 Ver asignaciones del cliente",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{baseUrl}}/clients/{{clientId}}/assignments", "host": ["{{baseUrl}}"], "path": ["clients", "{{clientId}}", "assignments"] }
+					}
+				},
+				{
+					"name": "4.5 Remover asignación de freelancer",
+					"request": {
+						"method": "DELETE",
+						"url": { "raw": "{{baseUrl}}/clients/{{clientId}}/assignments/{{freelancerId}}", "host": ["{{baseUrl}}"], "path": ["clients", "{{clientId}}", "assignments", "{{freelancerId}}"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "5. Candidatos",
+			"item": [
+				{
+					"name": "5.0 Login como Recruiter",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const res = pm.response.json();",
+									"if (res.success) {",
+									"    pm.collectionVariables.set('accessToken', res.data.accessToken);",
+									"    pm.collectionVariables.set('refreshToken', res.data.refreshToken);",
+									"    pm.test('Login recruiter', () => pm.response.to.have.status(200));",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"recruiter@bepro.com\",\n    \"password\": \"Recruiter123!\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+					}
+				},
+				{
+					"name": "5.1 Registrar candidato",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const res = pm.response.json();",
+									"if (res.success) {",
+									"    pm.collectionVariables.set('candidateId', res.data.id);",
+									"    pm.test('Candidato registrado', () => pm.response.to.have.status(201));",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"Juan Pérez Hernández\",\n    \"phone\": \"5551234567\",\n    \"interviewDate\": \"2026-03-20T00:00:00Z\",\n    \"clientId\": \"{{clientId}}\",\n    \"interviewTime\": \"09:00\",\n    \"position\": \"Operador de producción\",\n    \"municipality\": \"Ecatepec\",\n    \"age\": 28,\n    \"shift\": \"Matutino\",\n    \"plant\": \"Planta Norte\",\n    \"interviewPoint\": \"Oficina Central\",\n    \"comments\": \"Referido por empleado actual\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/candidates", "host": ["{{baseUrl}}"], "path": ["candidates"] }
+					}
+				},
+				{
+					"name": "5.2 Registrar segundo candidato",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"Ana Sofía Ramírez\",\n    \"phone\": \"5559876543\",\n    \"interviewDate\": \"2026-03-20T00:00:00Z\",\n    \"clientId\": \"{{clientId}}\",\n    \"interviewTime\": \"10:30\",\n    \"position\": \"Auxiliar de almacén\",\n    \"municipality\": \"Tlalnepantla\",\n    \"shift\": \"Vespertino\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/candidates", "host": ["{{baseUrl}}"], "path": ["candidates"] }
+					}
+				},
+				{
+					"name": "5.3 Mis candidatos (recruiter)",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{baseUrl}}/candidates/my", "host": ["{{baseUrl}}"], "path": ["candidates", "my"] }
+					}
+				},
+				{
+					"name": "5.4 Candidatos por cliente",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{baseUrl}}/candidates/client/{{clientId}}", "host": ["{{baseUrl}}"], "path": ["candidates", "client", "{{clientId}}"] }
+					}
+				},
+				{
+					"name": "5.5 Obtener candidato por ID",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{baseUrl}}/candidates/{{candidateId}}", "host": ["{{baseUrl}}"], "path": ["candidates", "{{candidateId}}"] }
+					}
+				},
+				{
+					"name": "5.6 Login como Leader (para cambiar status)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const res = pm.response.json();",
+									"if (res.success) {",
+									"    pm.collectionVariables.set('accessToken', res.data.accessToken);",
+									"    pm.collectionVariables.set('refreshToken', res.data.refreshToken);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"leader@bepro.com\",\n    \"password\": \"Leader123!\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+					}
+				},
+				{
+					"name": "5.7 Marcar entrevista programada",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": 1\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/candidates/{{candidateId}}/status", "host": ["{{baseUrl}}"], "path": ["candidates", "{{candidateId}}", "status"] },
+						"description": "InterviewScheduled = 1"
+					}
+				},
+				{
+					"name": "5.8 Marcar asistió",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": 2\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/candidates/{{candidateId}}/status", "host": ["{{baseUrl}}"], "path": ["candidates", "{{candidateId}}", "status"] },
+						"description": "Attended = 2"
+					}
+				},
+				{
+					"name": "5.9 Marcar pendiente",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": 4\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/candidates/{{candidateId}}/status", "host": ["{{baseUrl}}"], "path": ["candidates", "{{candidateId}}", "status"] },
+						"description": "Pending = 4"
+					}
+				},
+				{
+					"name": "5.10 Aprobar candidato",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": 5\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/candidates/{{candidateId}}/status", "host": ["{{baseUrl}}"], "path": ["candidates", "{{candidateId}}", "status"] },
+						"description": "Approved = 5"
+					}
+				},
+				{
+					"name": "5.11 Rechazar candidato (ejemplo)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": 6,\n    \"rejectionCategory\": 0,\n    \"rejectionDetails\": \"No cumple con requisitos de experiencia\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/candidates/{{candidateId}}/status", "host": ["{{baseUrl}}"], "path": ["candidates", "{{candidateId}}", "status"] },
+						"description": "Rejected = 6, RejectionCategory: Interview = 0. NO ejecutar si quieres continuar con el flujo de colocación."
+					}
+				}
+			]
+		},
+		{
+			"name": "6. Colocaciones",
+			"item": [
+				{
+					"name": "6.0 Login como Admin (para colocaciones)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const res = pm.response.json();",
+									"if (res.success) {",
+									"    pm.collectionVariables.set('accessToken', res.data.accessToken);",
+									"    pm.collectionVariables.set('refreshToken', res.data.refreshToken);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"admin@bepro.com\",\n    \"password\": \"Admin123!\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+					}
+				},
+				{
+					"name": "6.1 Crear colocación",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const res = pm.response.json();",
+									"if (res.success) {",
+									"    pm.collectionVariables.set('placementId', res.data.id);",
+									"    pm.test('Colocación creada', () => pm.response.to.have.status(201));",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"candidateId\": \"{{candidateId}}\",\n    \"hireDate\": \"2026-03-25T00:00:00Z\",\n    \"guaranteeEndDate\": \"2026-06-25T00:00:00Z\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/placements", "host": ["{{baseUrl}}"], "path": ["placements"] },
+						"description": "Requiere que el candidato esté en estado Approved (5)"
+					}
+				},
+				{
+					"name": "6.2 Ver colocación",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{baseUrl}}/placements/{{placementId}}", "host": ["{{baseUrl}}"], "path": ["placements", "{{placementId}}"] }
+					}
+				},
+				{
+					"name": "6.3 Colocaciones por cliente",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{baseUrl}}/placements/client/{{clientId}}", "host": ["{{baseUrl}}"], "path": ["placements", "client", "{{clientId}}"] }
+					}
+				},
+				{
+					"name": "6.4 Actualizar - Garantía cumplida",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"candidateId\": \"{{candidateId}}\",\n    \"candidateFullName\": \"\",\n    \"hireDate\": \"2026-03-25T00:00:00Z\",\n    \"guaranteeEndDate\": \"2026-06-25T00:00:00Z\",\n    \"guaranteeMet\": true,\n    \"terminationDate\": null,\n    \"freelancerPaymentStatus\": 1,\n    \"freelancerPaymentDate\": \"2026-07-01T00:00:00Z\"\n}"
+						},
+						"url": { "raw": "{{baseUrl}}/placements/{{placementId}}", "host": ["{{baseUrl}}"], "path": ["placements", "{{placementId}}"] },
+						"description": "Marca garantía cumplida y pago al freelancer. PaymentStatus: Paid = 1"
+					}
+				},
+				{
+					"name": "6.5 Verificar candidato quedó GuaranteeMet",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{baseUrl}}/candidates/{{candidateId}}", "host": ["{{baseUrl}}"], "path": ["candidates", "{{candidateId}}"] }
+					}
+				}
+			]
+		}
+	]
+}

@@ -19,4 +19,6 @@ public class CreateUserRequest
 
     [Required]
     public UserRole Role { get; set; }
+
+    public bool IsFreelancer { get; set; }
 }

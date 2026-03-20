@@ -10,6 +10,13 @@ public class BeProDbContext : DbContext
 
     public DbSet<User> Users => Set<User>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<Client> Clients => Set<Client>();
+    public DbSet<ClientFormConfig> ClientFormConfigs => Set<ClientFormConfig>();
+    public DbSet<ClientAssignment> ClientAssignments => Set<ClientAssignment>();
+    public DbSet<Candidate> Candidates => Set<Candidate>();
+    public DbSet<Placement> Placements => Set<Placement>();
+    public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<InvoicePlacement> InvoicePlacements => Set<InvoicePlacement>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

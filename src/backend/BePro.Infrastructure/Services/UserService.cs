@@ -40,7 +40,8 @@ public class UserService : IUserService
             PasswordHash = _passwordService.HashPassword(request.Password),
             FirstName = request.FirstName,
             LastName = request.LastName,
-            Role = request.Role
+            Role = request.Role,
+            IsFreelancer = request.IsFreelancer
         };
 
         await _userRepository.AddAsync(user);
@@ -77,6 +78,7 @@ public class UserService : IUserService
         FirstName = user.FirstName,
         LastName = user.LastName,
         Role = user.Role,
+        IsFreelancer = user.IsFreelancer,
         IsActive = user.IsActive,
         CreatedAt = user.CreatedAt,
         LastLoginAt = user.LastLoginAt

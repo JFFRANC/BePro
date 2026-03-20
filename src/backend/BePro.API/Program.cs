@@ -1,13 +1,22 @@
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using BePro.API.Middleware;
 using BePro.Core.Settings;
 using BePro.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(
+            new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseLower));
+    });
 builder.Services.AddOpenApi();
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));

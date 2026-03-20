@@ -19,11 +19,19 @@ public static class DependencyInjection
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IClientRepository, ClientRepository>();
+        services.AddScoped<IClientAssignmentRepository, ClientAssignmentRepository>();
+        services.AddScoped<ICandidateRepository, CandidateRepository>();
+        services.AddScoped<IPlacementRepository, PlacementRepository>();
+        services.AddScoped<IInvoiceRepository, InvoiceRepository>();
 
         services.AddScoped<IPasswordService, PasswordService>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IClientService, ClientService>();
+        services.AddScoped<ICandidateService, CandidateService>();
+        services.AddScoped<IPlacementService, PlacementService>();
 
         return services;
     }

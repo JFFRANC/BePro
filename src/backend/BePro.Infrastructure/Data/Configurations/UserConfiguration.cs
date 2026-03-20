@@ -33,9 +33,13 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(u => u.Role)
             .HasConversion(
-                v => v.ToString().ToLower().Replace("leadermanager", "leader_manager"),
+                v => v.ToString().ToLower().Replace("accountexecutive", "account_executive"),
                 v => Enum.Parse<UserRole>(v.Replace("_", ""), true))
             .HasMaxLength(20)
+            .IsRequired();
+
+        builder.Property(u => u.IsFreelancer)
+            .HasDefaultValue(false)
             .IsRequired();
 
         builder.HasMany(u => u.RefreshTokens)

@@ -22,6 +22,449 @@ namespace BePro.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("BePro.Core.Entities.Candidate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int?>("Age")
+                        .HasColumnType("integer")
+                        .HasColumnName("age");
+
+                    b.Property<bool>("Attended")
+                        .HasColumnType("boolean")
+                        .HasColumnName("attended");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("client_id");
+
+                    b.Property<string>("Comments")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("comments");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("full_name");
+
+                    b.Property<DateTime>("InterviewDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("interview_date");
+
+                    b.Property<string>("InterviewPoint")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("interview_point");
+
+                    b.Property<TimeOnly?>("InterviewTime")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("interview_time");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<Guid>("LeaderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("leader_id");
+
+                    b.Property<string>("Municipality")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("municipality");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("phone");
+
+                    b.Property<string>("Plant")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("plant");
+
+                    b.Property<string>("Position")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("position");
+
+                    b.Property<Guid>("RecruiterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("recruiter_id");
+
+                    b.Property<string>("RejectionCategory")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("rejection_category");
+
+                    b.Property<string>("RejectionDetails")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("rejection_details");
+
+                    b.Property<string>("Shift")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("shift");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_candidates");
+
+                    b.HasIndex("LeaderId")
+                        .HasDatabaseName("ix_candidates_leader_id");
+
+                    b.HasIndex("RecruiterId")
+                        .HasDatabaseName("ix_candidates_recruiter_id");
+
+                    b.HasIndex("ClientId", "Status")
+                        .HasDatabaseName("ix_candidates_client_id_status");
+
+                    b.ToTable("candidates", (string)null);
+                });
+
+            modelBuilder.Entity("BePro.Core.Entities.Client", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("address");
+
+                    b.Property<string>("ContactInfo")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("contact_info");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_clients");
+
+                    b.ToTable("clients", (string)null);
+                });
+
+            modelBuilder.Entity("BePro.Core.Entities.ClientAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("client_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<Guid?>("LeaderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("leader_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_client_assignments");
+
+                    b.HasIndex("LeaderId")
+                        .HasDatabaseName("ix_client_assignments_leader_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_client_assignments_user_id");
+
+                    b.HasIndex("ClientId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_client_assignments_client_id_user_id");
+
+                    b.ToTable("client_assignments", (string)null);
+                });
+
+            modelBuilder.Entity("BePro.Core.Entities.ClientFormConfig", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("client_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("ShowAge")
+                        .HasColumnType("boolean")
+                        .HasColumnName("show_age");
+
+                    b.Property<bool>("ShowComments")
+                        .HasColumnType("boolean")
+                        .HasColumnName("show_comments");
+
+                    b.Property<bool>("ShowInterviewPoint")
+                        .HasColumnType("boolean")
+                        .HasColumnName("show_interview_point");
+
+                    b.Property<bool>("ShowInterviewTime")
+                        .HasColumnType("boolean")
+                        .HasColumnName("show_interview_time");
+
+                    b.Property<bool>("ShowMunicipality")
+                        .HasColumnType("boolean")
+                        .HasColumnName("show_municipality");
+
+                    b.Property<bool>("ShowPlant")
+                        .HasColumnType("boolean")
+                        .HasColumnName("show_plant");
+
+                    b.Property<bool>("ShowPosition")
+                        .HasColumnType("boolean")
+                        .HasColumnName("show_position");
+
+                    b.Property<bool>("ShowShift")
+                        .HasColumnType("boolean")
+                        .HasColumnName("show_shift");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_client_form_configs");
+
+                    b.HasIndex("ClientId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_client_form_configs_client_id");
+
+                    b.ToTable("client_form_configs", (string)null);
+                });
+
+            modelBuilder.Entity("BePro.Core.Entities.Invoice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("client_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("invoice_number");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<DateTime>("IssueDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("issue_date");
+
+                    b.Property<DateTime?>("PaymentDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("payment_date");
+
+                    b.Property<string>("PaymentStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("payment_status");
+
+                    b.Property<decimal>("Tax")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("tax");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("total");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_invoices");
+
+                    b.HasIndex("ClientId")
+                        .HasDatabaseName("ix_invoices_client_id");
+
+                    b.HasIndex("InvoiceNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_invoices_invoice_number");
+
+                    b.ToTable("invoices", (string)null);
+                });
+
+            modelBuilder.Entity("BePro.Core.Entities.InvoicePlacement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("invoice_id");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<Guid>("PlacementId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("placement_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_invoice_placements");
+
+                    b.HasIndex("PlacementId")
+                        .HasDatabaseName("ix_invoice_placements_placement_id");
+
+                    b.HasIndex("InvoiceId", "PlacementId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_invoice_placements_invoice_id_placement_id");
+
+                    b.ToTable("invoice_placements", (string)null);
+                });
+
+            modelBuilder.Entity("BePro.Core.Entities.Placement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CandidateId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("candidate_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("FreelancerPaymentDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("freelancer_payment_date");
+
+                    b.Property<string>("FreelancerPaymentStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("freelancer_payment_status");
+
+                    b.Property<DateTime?>("GuaranteeEndDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("guarantee_end_date");
+
+                    b.Property<bool?>("GuaranteeMet")
+                        .HasColumnType("boolean")
+                        .HasColumnName("guarantee_met");
+
+                    b.Property<DateTime>("HireDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("hire_date");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<DateTime?>("TerminationDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("termination_date");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_placements");
+
+                    b.HasIndex("CandidateId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_placements_candidate_id");
+
+                    b.ToTable("placements", (string)null);
+                });
+
             modelBuilder.Entity("BePro.Core.Entities.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -30,11 +473,11 @@ namespace BePro.Infrastructure.Migrations
                         .HasColumnName("id");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("expires_at");
 
                     b.Property<bool>("IsActive")
@@ -47,7 +490,7 @@ namespace BePro.Infrastructure.Migrations
                         .HasColumnName("replaced_by_token");
 
                     b.Property<DateTime?>("RevokedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("revoked_at");
 
                     b.Property<string>("Token")
@@ -57,7 +500,7 @@ namespace BePro.Infrastructure.Migrations
                         .HasColumnName("token");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("updated_at");
 
                     b.Property<Guid>("UserId")
@@ -85,7 +528,7 @@ namespace BePro.Infrastructure.Migrations
                         .HasColumnName("id");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_at");
 
                     b.Property<string>("Email")
@@ -104,8 +547,14 @@ namespace BePro.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
 
+                    b.Property<bool>("IsFreelancer")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_freelancer");
+
                     b.Property<DateTime?>("LastLoginAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("last_login_at");
 
                     b.Property<string>("LastName")
@@ -126,7 +575,7 @@ namespace BePro.Infrastructure.Migrations
                         .HasColumnName("role");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id")
@@ -146,11 +595,128 @@ namespace BePro.Infrastructure.Migrations
                             Email = "admin@bepro.com",
                             FirstName = "Admin",
                             IsActive = true,
+                            IsFreelancer = false,
                             LastName = "BePro",
                             PasswordHash = "$2a$11$SEXXFVhuj21MwybRNKPHMO6cTApwxyAyoagArHGSYq4ON.5t7J6Qa",
                             Role = "admin",
                             UpdatedAt = new DateTime(2026, 3, 18, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
+                });
+
+            modelBuilder.Entity("BePro.Core.Entities.Candidate", b =>
+                {
+                    b.HasOne("BePro.Core.Entities.Client", "Client")
+                        .WithMany("Candidates")
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_candidates_clients_client_id");
+
+                    b.HasOne("BePro.Core.Entities.User", "Leader")
+                        .WithMany("LedCandidates")
+                        .HasForeignKey("LeaderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_candidates_users_leader_id");
+
+                    b.HasOne("BePro.Core.Entities.User", "Recruiter")
+                        .WithMany("RecruitedCandidates")
+                        .HasForeignKey("RecruiterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_candidates_users_recruiter_id");
+
+                    b.Navigation("Client");
+
+                    b.Navigation("Leader");
+
+                    b.Navigation("Recruiter");
+                });
+
+            modelBuilder.Entity("BePro.Core.Entities.ClientAssignment", b =>
+                {
+                    b.HasOne("BePro.Core.Entities.Client", "Client")
+                        .WithMany("Assignments")
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_client_assignments_clients_client_id");
+
+                    b.HasOne("BePro.Core.Entities.User", "Leader")
+                        .WithMany()
+                        .HasForeignKey("LeaderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_client_assignments_users_leader_id");
+
+                    b.HasOne("BePro.Core.Entities.User", "User")
+                        .WithMany("ClientAssignments")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_client_assignments_users_user_id");
+
+                    b.Navigation("Client");
+
+                    b.Navigation("Leader");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BePro.Core.Entities.ClientFormConfig", b =>
+                {
+                    b.HasOne("BePro.Core.Entities.Client", "Client")
+                        .WithOne("FormConfig")
+                        .HasForeignKey("BePro.Core.Entities.ClientFormConfig", "ClientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_client_form_configs_clients_client_id");
+
+                    b.Navigation("Client");
+                });
+
+            modelBuilder.Entity("BePro.Core.Entities.Invoice", b =>
+                {
+                    b.HasOne("BePro.Core.Entities.Client", "Client")
+                        .WithMany("Invoices")
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_invoices_clients_client_id");
+
+                    b.Navigation("Client");
+                });
+
+            modelBuilder.Entity("BePro.Core.Entities.InvoicePlacement", b =>
+                {
+                    b.HasOne("BePro.Core.Entities.Invoice", "Invoice")
+                        .WithMany("InvoicePlacements")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_invoice_placements_invoices_invoice_id");
+
+                    b.HasOne("BePro.Core.Entities.Placement", "Placement")
+                        .WithMany()
+                        .HasForeignKey("PlacementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_invoice_placements_placements_placement_id");
+
+                    b.Navigation("Invoice");
+
+                    b.Navigation("Placement");
+                });
+
+            modelBuilder.Entity("BePro.Core.Entities.Placement", b =>
+                {
+                    b.HasOne("BePro.Core.Entities.Candidate", "Candidate")
+                        .WithOne("Placement")
+                        .HasForeignKey("BePro.Core.Entities.Placement", "CandidateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_placements_candidates_candidate_id");
+
+                    b.Navigation("Candidate");
                 });
 
             modelBuilder.Entity("BePro.Core.Entities.RefreshToken", b =>
@@ -165,8 +731,36 @@ namespace BePro.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("BePro.Core.Entities.Candidate", b =>
+                {
+                    b.Navigation("Placement");
+                });
+
+            modelBuilder.Entity("BePro.Core.Entities.Client", b =>
+                {
+                    b.Navigation("Assignments");
+
+                    b.Navigation("Candidates");
+
+                    b.Navigation("FormConfig")
+                        .IsRequired();
+
+                    b.Navigation("Invoices");
+                });
+
+            modelBuilder.Entity("BePro.Core.Entities.Invoice", b =>
+                {
+                    b.Navigation("InvoicePlacements");
+                });
+
             modelBuilder.Entity("BePro.Core.Entities.User", b =>
                 {
+                    b.Navigation("ClientAssignments");
+
+                    b.Navigation("LedCandidates");
+
+                    b.Navigation("RecruitedCandidates");
+
                     b.Navigation("RefreshTokens");
                 });
 #pragma warning restore 612, 618
