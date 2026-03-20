@@ -107,13 +107,50 @@ El detalle tiene tres pestañas:
 - **Configuración de formulario** — Campos visibles en el formulario de candidatos
 - **Usuarios asignados** — Equipo de trabajo asignado a este cliente
 
-### 4.2 Usuarios asignados al cliente
+### 4.2 Configuración de formulario
+
+> **Permitido para:** Administrador
+
+Cada cliente puede tener un formulario de candidatos personalizado. Esta pestaña permite activar o desactivar los campos opcionales que aparecerán al registrar un candidato para ese cliente.
+
+![Configuración de formulario](manual_07b_config_formulario.png)
+
+**Campos configurables:**
+
+| Campo | Descripción |
+|-------|-------------|
+| Hora de entrevista | Hora específica de la cita |
+| Puesto | Puesto o posición al que aplica |
+| Municipio | Municipio de residencia del candidato |
+| Edad | Edad del candidato |
+| Turno | Turno de trabajo (matutino, vespertino, nocturno) |
+| Planta | Planta o sucursal donde trabajará |
+| Punto de entrevista | Lugar físico donde se realizará la entrevista |
+| Comentarios | Campo libre para notas adicionales |
+
+Los switches **activados** (negro) hacen que el campo sea **visible y requerido** en el formulario de registro de candidatos. Los desactivados simplemente no aparecen.
+
+> Los cambios se guardan automáticamente al activar o desactivar cada switch. No hay botón de guardar.
+
+### 4.3 Usuarios asignados al cliente
 
 ![Usuarios asignados](manual_08_usuarios_asignados.png)
 
-Muestra los usuarios del equipo asignados a ese cliente, con su rol actualizado. Desde aquí un Administrador o Gerente puede:
-- **Asignar usuario** — Agregar un miembro del equipo
-- **Eliminar asignación** — Quitar a un usuario (ícono de papelera)
+Muestra los usuarios del equipo asignados a ese cliente, con su rol. Desde aquí un Administrador o Gerente puede asignar nuevos usuarios o quitar asignaciones existentes.
+
+### 4.4 Asignar usuario a un cliente
+
+> **Permitido para:** Administrador, Gerente
+
+Haz clic en **Asignar usuario** para abrir el dialog de asignación.
+
+![Dialog asignar usuario](manual_08b_asignar_usuario.png)
+
+**Pasos:**
+1. Selecciona el usuario del desplegable — solo aparecen los usuarios que **aún no están asignados** a este cliente
+2. Haz clic en **Asignar**
+
+Para **quitar** un usuario ya asignado, haz clic en el ícono de papelera (🗑) que aparece junto a su nombre en la lista.
 
 ---
 
