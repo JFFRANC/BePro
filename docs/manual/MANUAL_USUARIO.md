@@ -194,27 +194,53 @@ Haz clic en **Cambiar estatus** para abrir el diálogo de transición.
 
 ![Dialog cambiar estatus](manual_11_cambiar_estatus.png)
 
-**Flujo de estatus:**
+**Flujo completo de estatus:**
 
 ```
-Registrado → Cita agendada → Entrevistado → Apto / No apto
-                                                  ↓
-                                              [Crear colocación]  (solo desde Apto)
+Registrado
+├── Cita agendada
+│   ├── Asistió
+│   │   ├── Apto ──────────────► [Crear colocación → Ingresó → En garantía]
+│   │   ├── No apto  *          └── Garantía cumplida / Baja → Reposición
+│   │   ├── Declinó oferta  *
+│   │   └── Pendiente
+│   │       ├── Apto  *
+│   │       ├── No apto  *
+│   │       ├── Declinó oferta  *
+│   │       └── Descartado  ⛔
+│   ├── No se presentó
+│   │   └── Descartado  ⛔
+│   └── Descartado  ⛔
+├── No se presentó
+│   └── Descartado  ⛔
+└── Descartado  ⛔
+
+⛔ = estatus final, sin más transiciones
+*  = requiere seleccionar Motivo
 ```
 
-**Estatus disponibles:**
+**Opciones disponibles por estatus actual:**
 
-| Estatus | Descripción |
-|---------|-------------|
-| Registrado | Candidato recién ingresado al sistema |
-| Cita agendada | Se agendó entrevista formal |
-| Entrevistado | Ya asistió a entrevista |
-| Apto | Aprobado para ingresar |
-| No apto | Descartado del proceso |
-| No se presentó | No asistió a la cita |
-| Descartado | Rechazado en alguna etapa |
+| Estatus actual | Puede cambiar a |
+|----------------|-----------------|
+| **Registrado** | Cita agendada · No se presentó · Descartado |
+| **Cita agendada** | Asistió · No se presentó · Descartado |
+| **Asistió** | Apto · No apto · Declinó oferta · Pendiente |
+| **Pendiente** | Apto · No apto · Declinó oferta · Descartado |
+| **No se presentó** | Descartado |
+| **Apto** | _(sin cambios — se crea colocación desde aquí)_ |
+| **No apto** | _(estatus final)_ |
+| **Declinó oferta** | _(estatus final)_ |
+| **Descartado** | _(estatus final)_ |
+| **Ingresó** | En garantía |
+| **En garantía** | Garantía cumplida · Baja |
+| **Garantía cumplida** | _(estatus final)_ |
+| **Baja** | Reposición |
+| **Reposición** | _(estatus final)_ |
 
-> Cuando el candidato alcanza el estatus **Apto**, aparece el panel **Crear colocación** para registrar su ingreso formal.
+> Los estatus **No apto** y **Declinó oferta** solicitan adicionalmente un **Motivo** (por entrevista, por salario, por horarios, decisión personal, etc.) y un campo opcional de detalles.
+
+> Cuando el candidato llega a **Apto**, en lugar de cambiar el estatus manualmente aparece el panel **Crear colocación**. Al registrar la colocación, el candidato pasa automáticamente a **Ingresó** y el flujo continúa desde el módulo Colocaciones.
 
 ---
 
