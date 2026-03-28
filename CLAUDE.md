@@ -1,112 +1,149 @@
 # BePro - Sistema de Reclutamiento y Selección de Personal
 
-## Descripción del Proyecto
-Sistema web modular para la empresa BePro, dedicada al reclutamiento y selección de personal.
-Reemplaza procesos manuales basados en Google Sheets y Google Forms.
-El sistema gestiona el ciclo completo: registro de candidatos, seguimiento de vacantes,
-control de entrevistas y colocación de candidatos en empresas cliente.
+## Project Description
+Multi-tenant web platform for BePro, a recruitment and staffing company.
+Replaces manual processes based on Google Sheets and Google Forms.
+Manages the full cycle: candidate registration, vacancy tracking, interview control,
+and candidate placement at client companies.
 
-## Stack Tecnológico
-- **Frontend:** Next.js 14+ (App Router) con React 18+ y TypeScript
-- **Backend:** .NET 10 Web API con C#
-- **Base de datos:** PostgreSQL 18
-- **ORM:** Entity Framework Core 10
-- **Autenticación:** JWT + Refresh Tokens
-- **CI/CD:** GitHub Actions
-- **Deploy:** Vercel (frontend) + Render (API + PostgreSQL)
+## Tech Stack
+- **Frontend:** React + Vite SPA deployed to Cloudflare Pages
+- **API:** Cloudflare Workers with Hono framework (TypeScript)
+- **Database:** Neon PostgreSQL (serverless) with Row-Level Security (RLS)
+- **ORM:** Drizzle ORM (type-safe, schema co-located with modules)
+- **Shared:** Zod validation schemas + TypeScript types in `packages/shared`
+- **Storage:** Cloudflare R2 for file storage
+- **Auth:** JWT (15-60 min) + refresh tokens (7 days) with rotation, issued/validated in Workers
+- **Testing:** Vitest for frontend and API
+- **CI/CD:** GitHub Actions — `lint → typecheck → test → deploy`
+- **Deploy:** Cloudflare Pages (frontend) + Cloudflare Workers via Wrangler (API)
+- **Target cost:** $0-25/month
 
-## Estructura del Repositorio
+> **Legacy code:** `src/backend/` (.NET) and `src/frontend/` (Next.js) are being replaced by this stack. Do not extend them.
+
+## Repository Structure
 ```
 bepro/
-├── src/
-│   ├── frontend/          # Next.js app
-│   │   ├── app/           # App Router pages
-│   │   ├── components/    # Componentes reutilizables
-│   │   ├── lib/           # Utilidades y helpers
-│   │   ├── hooks/         # Custom hooks
-│   │   ├── services/      # Llamadas a API
-│   │   ├── store/         # Estado global
-│   │   └── types/         # TypeScript types/interfaces
-│   └── backend/
-│       └── BePro.API/     # Solución .NET
-│           ├── BePro.API/           # Proyecto Web API (controllers, middleware)
-│           ├── BePro.Core/          # Entidades, interfaces, DTOs
-│           ├── BePro.Infrastructure/# EF Core, repositorios, servicios externos
-│           └── BePro.Tests/         # Unit + Integration tests
-├── docs/                  # Documentación del proyecto
-│   ├── architecture/      # Decisiones de arquitectura
-│   ├── api/               # Documentación de endpoints
-│   └── modules/           # Documentación por módulo
-├── scripts/               # Scripts de utilidad (seed, migraciones)
+├── apps/
+│   ├── web/                   # React + Vite SPA (Cloudflare Pages)
+│   │   ├── src/
+│   │   │   ├── modules/       # Domain modules (components, hooks, services)
+│   │   │   ├── components/    # Shared UI components
+│   │   │   ├── hooks/         # Shared custom hooks
+│   │   │   ├── lib/           # Utilities and helpers
+│   │   │   ├── store/         # Global state (Zustand)
+│   │   │   └── types/         # Shared frontend types
+│   │   └── public/
+│   └── api/                   # Cloudflare Workers + Hono
+│       └── src/
+│           └── modules/       # Domain modules (routes, service, types, schema)
+├── packages/
+│   ├── shared/                # Shared types + Zod schemas (consumed by web + api)
+│   └── db/                    # Drizzle ORM schemas + migrations
+├── docs/
+│   ├── architecture/          # ADRs (Architecture Decision Records)
+│   ├── api/                   # API endpoint documentation
+│   └── modules/               # Module-level documentation
+├── .specify/                  # GitHub Spec Kit (constitution, specs, plans, tasks)
 ├── .github/
-│   └── workflows/         # GitHub Actions CI/CD
-├── CLAUDE.md              # Este archivo
-└── README.md              # Solo si se solicita
+│   └── workflows/             # GitHub Actions CI/CD
+├── scripts/                   # Utility scripts (seed, migrations)
+├── CLAUDE.md                  # This file (project-wide)
+└── turbo.json                 # Turborepo configuration
 ```
 
-## Arquitectura
-- **Patrón:** Clean Architecture (Core → Infrastructure → API) con .NET 10
-- **API:** RESTful con versionado (v1, v2...)
-- **Frontend:** Server Components por defecto, Client Components cuando se necesite interactividad
-- **Autenticación:** JWT con roles y claims
-- **Base de datos:** Code-First con migraciones de EF Core
+Per-domain CLAUDE.md files will be created as each domain is scaffolded:
+- `apps/web/CLAUDE.md` — React + Vite patterns
+- `apps/api/CLAUDE.md` — Hono + Workers patterns
+- `packages/db/CLAUDE.md` — Drizzle + RLS patterns
 
-## Módulos del Sistema (por orden de implementación)
-1. **Autenticación y Usuarios** - Login, roles, permisos
-2. **Operaciones** - Módulo principal (reemplaza Google Sheets/Forms)
-   - Gestión de candidatos
-   - Gestión de vacantes
-   - Control de entrevistas
-   - Seguimiento de colocaciones
-3. *(Módulos futuros se definirán progresivamente)*
+## Architecture
+- **Pattern:** Edge-first, modular by domain, multi-tenant
+- **Multi-tenancy:** `tenant_id` on every tenant-scoped table, RLS at PostgreSQL level, tenant context from JWT claims via `SET LOCAL app.tenant_id`
+- **API:** RESTful with Hono on Cloudflare Workers
+- **Frontend:** React SPA with client-side routing
+- **Modules:** Each domain is independent — own routes, services, types, and schema
+- **Module structure (API):** `modules/{name}/routes.ts`, `service.ts`, `types.ts`, `schema.ts`
+- **Module structure (Frontend):** `modules/{name}/` with components, hooks, and services
+- **Adding a module MUST NOT require modifying existing modules**
 
-## Roles del Sistema
-| Rol | Descripción |
-|-----|-------------|
-| `admin` | Dirección General - acceso total |
-| `leader_manager` | Líder de líderes - supervisa equipos |
-| `leader` | Líder de reclutadores - gestiona su equipo |
-| `recruiter` | Reclutador interno - operación diaria |
-| `freelancer` | Reclutador freelancer - acceso limitado |
+## Modules (implementation order)
+1. `auth` — JWT login, token rotation, middleware
+2. `tenants` — Tenant provisioning and isolation
+3. `users` — User CRUD within tenant, role assignment
+4. `clients` — Client company management
+5. `candidates` — Candidate registration and tracking
+6. `placements` — Candidate-to-client placement lifecycle
+7. `audit` — Append-only audit trail (who/what/when/old/new)
 
-## Convenciones de Código
+## Roles
+| Role | Access Level |
+|------|-------------|
+| `admin` | Full system access within tenant |
+| `manager` | Supervises all teams and clients, cannot create users/clients |
+| `account_executive` | Manages assigned clients only, sees only their recruiters' candidates |
+| `recruiter` | Registers candidates, views only own candidates, cannot change status |
+| `recruiter` + `is_freelancer: true` | Same as recruiter, flagged for payment tracking |
+
+## Code Conventions
 
 ### General
-- Idioma del código: **inglés** (variables, funciones, clases)
-- Idioma de comentarios y documentación: **español**
-- Commits en español siguiendo Conventional Commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`
+- Code language: **English** (variables, functions, classes)
+- Comments and documentation: **Spanish**
+- Commits in Spanish following Conventional Commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`
+- TypeScript in strict mode (`"strict": true`) everywhere
 
-### Frontend (Next.js / TypeScript)
-- Componentes: PascalCase (`CandidateCard.tsx`)
-- Hooks: camelCase con prefijo `use` (`useCandidates.ts`)
-- Servicios: camelCase (`candidateService.ts`)
-- Types/Interfaces: PascalCase con prefijo `I` para interfaces (`ICandidate.ts`)
-- Estilos: CSS Modules o Tailwind CSS
-- Estado: Zustand o React Context (según complejidad)
+### Frontend (React + Vite / TypeScript)
+- Components: PascalCase (`CandidateCard.tsx`)
+- Hooks: camelCase with `use` prefix (`useCandidates.ts`)
+- Services: camelCase (`candidateService.ts`)
+- Types/Interfaces: PascalCase with `I` prefix for interfaces (`ICandidate.ts`)
+- Styles: Tailwind CSS with shadcn/ui components
+- State: Zustand for global state, TanStack Query for server state
+- Forms: React Hook Form + Zod validation
 
-### Backend (.NET / C#)
-- Controllers: PascalCase plural (`CandidatesController.cs`)
-- Entidades: PascalCase singular (`Candidate.cs`)
-- DTOs: PascalCase con sufijo (`CandidateDto.cs`, `CreateCandidateRequest.cs`)
-- Interfaces: prefijo `I` (`ICandidateRepository.cs`)
-- Async methods: sufijo `Async` (`GetCandidatesAsync`)
+### API (Hono / TypeScript)
+- Routes: camelCase (`candidates.routes.ts`)
+- Services: camelCase (`candidates.service.ts`)
+- Zod schemas for request/response validation (shared with frontend via `packages/shared`)
+- Middleware: JWT validation, tenant resolution, rate limiting
 
-### Base de Datos
-- Tablas: snake_case plural (`candidates`, `job_positions`)
-- Columnas: snake_case (`first_name`, `created_at`)
-- Todas las tablas incluyen: `id`, `created_at`, `updated_at`, `is_active`
+### Database
+- Tables: snake_case plural (`candidates`, `job_positions`)
+- Columns: snake_case (`first_name`, `created_at`)
+- All tables include: `id`, `created_at`, `updated_at`, `is_active`
+- All tenant-scoped tables include: `tenant_id`
+- Unique constraints: `(tenant_id, email)` on User; `(tenant_id, phone, client_id)` on Candidate
+- Soft delete only (`is_active` flag) — never hard delete PII (LFPDPPP compliance)
+- Drizzle ORM schemas co-located with their module in `packages/db`
 
 ### Git
-- Branch principal: `main`
-- Feature branches: `feature/nombre-descriptivo`
-- Fix branches: `fix/nombre-descriptivo`
-- PRs obligatorios para merge a main
+- Branch flow: `feature/* → development → testing → main`
+- Feature branches: `feature/descriptive-name`
+- Fix branches: `fix/descriptive-name`
+- PRs required for merge to main
+- Direct commits to `main`, `testing`, or `development` are prohibited
 
-## Reglas para Claude
-- No crear archivos README.md a menos que se solicite
-- No agregar comentarios innecesarios al código
-- Preferir código simple y legible sobre abstracciones prematuras
-- Siempre leer archivos existentes antes de modificarlos
-- Ejecutar builds/tests después de cambios significativos
-- Cuando se analicen archivos Excel de la empresa, documentar hallazgos en `docs/modules/`
-- Consultar la memoria del proyecto antes de tomar decisiones de arquitectura
+## Security & Compliance
+- Passwords: bcrypt with cost factor >= 12
+- PII MUST NOT be logged in plain text (LFPDPPP)
+- Privacy notice MUST be presented during candidate registration
+- API protection: rate limiting (Cloudflare built-in), CORS restricted to known origins
+- Audit trail: append-only `AuditEvent` table for every state change
+- If a service requires a traditional server (e.g., CFDI processing), use Fly.io — document in an ADR
+
+## Development Workflow
+- **Spec-driven:** Constitution → Spec → Plan → Tasks → Implementation (GitHub Spec Kit)
+- **TDD mandatory:** RED → GREEN → REFACTOR. No test, no merge.
+- **CI pipeline:** `lint → typecheck → test → deploy` — a failing stage blocks the pipeline
+- **Team:** Two developers (Hector + Javi). Both review and approve specs.
+
+## Rules for Claude
+- Do not create README.md files unless requested
+- Do not add unnecessary comments to code
+- Prefer simple, readable code over premature abstractions
+- Always read existing files before modifying them
+- Run builds/tests after significant changes
+- When analyzing company Excel files, document findings in `docs/modules/`
+- Consult project memory before making architecture decisions
+- Constitution (`.specify/memory/constitution.md`) supersedes this file in case of conflict
