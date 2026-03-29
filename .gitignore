@@ -49,3 +49,6 @@ TestResults/
 # Database
 *.mdf
 *.ldf
+
+# Archivos internos de administración
+ADMIN_GENERAL/

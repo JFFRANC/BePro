@@ -11,9 +11,20 @@ control de entrevistas y colocación de candidatos en empresas cliente.
 - **Backend:** .NET 10 Web API con C#
 - **Base de datos:** PostgreSQL 18
 - **ORM:** Entity Framework Core 10
-- **Autenticación:** JWT + Refresh Tokens
+- **Autenticación:** JWT + Refresh Tokens (httpOnly cookies)
 - **CI/CD:** GitHub Actions
 - **Deploy:** Vercel (frontend) + Render (API + PostgreSQL)
+
+## Stack Frontend (decisiones confirmadas)
+- **UI Components:** shadcn/ui (Radix UI + Tailwind CSS)
+- **Data Fetching / Server State:** TanStack Query (React Query)
+- **Formularios + Validación:** React Hook Form + Zod
+- **Estado Global (auth):** Zustand
+- **HTTP Client:** axios (con interceptores para JWT automático y refresh)
+- **JWT Storage:** httpOnly cookies (más seguro, compatible con middleware Next.js)
+- **Responsive:** Desktop-first, responsive hasta mobile (no PWA)
+- **Navegación móvil:** Sidebar colapsable en desktop → Sheet/Drawer en móvil
+- **Tablas:** Tablas en desktop, cards en móvil (Tailwind breakpoints)
 
 ## Estructura del Repositorio
 ```
@@ -81,8 +92,12 @@ bepro/
 - Hooks: camelCase con prefijo `use` (`useCandidates.ts`)
 - Servicios: camelCase (`candidateService.ts`)
 - Types/Interfaces: PascalCase con prefijo `I` para interfaces (`ICandidate.ts`)
-- Estilos: CSS Modules o Tailwind CSS
-- Estado: Zustand o React Context (según complejidad)
+- Estilos: Tailwind CSS (no CSS Modules)
+- Estado servidor: TanStack Query (no fetch manual)
+- Estado global: Zustand (solo auth/sesión)
+- Estado local: useState (modales, tabs, UI local)
+- Validación: Zod schemas en `lib/schemas/`
+- Componentes shadcn/ui en `components/ui/` (no modificar, extender en `components/`)
 
 ### Backend (.NET / C#)
 - Controllers: PascalCase plural (`CandidatesController.cs`)
