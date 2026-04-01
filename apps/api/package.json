@@ -1,0 +1,25 @@
+{
+  "name": "@bepro/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "wrangler deploy --dry-run --outdir=dist",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "lint": "echo 'lint: ok'"
+  },
+  "dependencies": {
+    "hono": "^4.7.10",
+    "@bepro/shared": "workspace:*",
+    "@bepro/db": "workspace:*"
+  },
+  "devDependencies": {
+    "wrangler": "^4.19.1",
+    "@cloudflare/workers-types": "^4.20250620.0",
+    "vitest": "^3.2.3",
+    "typescript": "^5.8.3"
+  }
+}

@@ -19,8 +19,6 @@ and candidate placement at client companies.
 - **Deploy:** Cloudflare Pages (frontend) + Cloudflare Workers via Wrangler (API)
 - **Target cost:** $0-25/month
 
-> **Legacy code:** `src/backend/` (.NET) and `src/frontend/` (Next.js) are being replaced by this stack. Do not extend them.
-
 ## Repository Structure
 ```
 bepro/
@@ -29,10 +27,8 @@ bepro/
 │   │   ├── src/
 │   │   │   ├── modules/       # Domain modules (components, hooks, services)
 │   │   │   ├── components/    # Shared UI components
-│   │   │   ├── hooks/         # Shared custom hooks
 │   │   │   ├── lib/           # Utilities and helpers
-│   │   │   ├── store/         # Global state (Zustand)
-│   │   │   └── types/         # Shared frontend types
+│   │   │   └── store/         # Global state (Zustand)
 │   │   └── public/
 │   └── api/                   # Cloudflare Workers + Hono
 │       └── src/
@@ -52,10 +48,10 @@ bepro/
 └── turbo.json                 # Turborepo configuration
 ```
 
-Per-domain CLAUDE.md files will be created as each domain is scaffolded:
+Per-domain CLAUDE.md files:
 - `apps/web/CLAUDE.md` — React + Vite patterns
 - `apps/api/CLAUDE.md` — Hono + Workers patterns
-- `packages/db/CLAUDE.md` — Drizzle + RLS patterns
+- `packages/db/CLAUDE.md` — Drizzle + RLS patterns (created with auth module)
 
 ## Architecture
 - **Pattern:** Edge-first, modular by domain, multi-tenant
