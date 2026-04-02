@@ -143,3 +143,11 @@ Per-domain CLAUDE.md files:
 - When analyzing company Excel files, document findings in `docs/modules/`
 - Consult project memory before making architecture decisions
 - Constitution (`.specify/memory/constitution.md`) supersedes this file in case of conflict
+
+## Active Technologies
+- TypeScript 5.x (strict mode) + Hono 4.x (`hono/jwt`, `hono/cookie` for auth), bcryptjs 2.x (password hashing), Drizzle ORM 0.44.x, @neondatabase/serverless 1.x
+- Neon PostgreSQL (serverless) via HTTP driver (`drizzle-orm/neon-http`) with batch transactions for RLS (`SET LOCAL`)
+- Zod 4.x (shared validation schemas in `packages/shared`)
+
+## Recent Changes
+- 002-jwt-auth-module: JWT auth with opaque refresh tokens (httpOnly cookie), tenant resolution via slug, per-account brute-force lockout, role-based middleware, RLS tenant isolation

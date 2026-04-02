@@ -10,16 +10,25 @@ export interface ICurrentUser {
   firstName: string;
   lastName: string;
   role: UserRole;
+  tenantId: string;
   isFreelancer: boolean;
 }
 
 export interface ILoginRequest {
   email: string;
   password: string;
+  tenantSlug: string;
 }
 
 export interface IAuthResponse {
   accessToken: string;
-  refreshToken: string;
   expiresAt: string;
+  user: ICurrentUser;
+}
+
+export interface IAuthMeResponse {
+  user: ICurrentUser & {
+    tenantName: string;
+    tenantSlug: string;
+  };
 }

@@ -12,14 +12,19 @@
     "lint": "echo 'lint: ok'"
   },
   "dependencies": {
-    "hono": "^4.7.10",
+    "@bepro/db": "workspace:*",
     "@bepro/shared": "workspace:*",
-    "@bepro/db": "workspace:*"
+    "@neondatabase/serverless": "^1.0.2",
+    "bcryptjs": "^3.0.3",
+    "drizzle-orm": "^0.44.7",
+    "hono": "^4.7.10",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
-    "wrangler": "^4.19.1",
     "@cloudflare/workers-types": "^4.20250620.0",
+    "@types/bcryptjs": "^3.0.0",
+    "typescript": "^5.8.3",
     "vitest": "^3.2.3",
-    "typescript": "^5.8.3"
+    "wrangler": "^4.19.1"
   }
 }
