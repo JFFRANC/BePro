@@ -3,18 +3,18 @@ node_modules/
 .pnp/
 .pnp.js
 
-# Next.js
-.next/
-out/
+# Build
+dist/
+build/
+.turbo/
+*.tsbuildinfo
 
-# .NET
-bin/
-obj/
-*.user
-*.suo
-*.userosscache
-*.sln.docstates
-packages/
+# Cloudflare
+.wrangler/
+.dev.vars
+
+# Vite
+.vite/
 
 # Environment
 .env
@@ -31,12 +31,8 @@ packages/
 *.swo
 
 # OS
-Thumbs.db
 .DS_Store
-
-# Build
-dist/
-build/
+Thumbs.db
 
 # Logs
 *.log
@@ -44,7 +40,9 @@ npm-debug.log*
 
 # Test
 coverage/
-TestResults/
+
+# Drizzle
+drizzle/meta/
 
 # Database
 *.mdf

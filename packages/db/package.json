@@ -1,0 +1,38 @@
+{
+  "name": "@bepro/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx scripts/seed.ts",
+    "db:apply-rls": "tsx scripts/apply-rls.ts",
+    "db:setup": "pnpm db:push && pnpm db:apply-rls && pnpm db:seed",
+    "db:reset": "drizzle-kit push --force && pnpm db:apply-rls && pnpm db:seed"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.0",
+    "drizzle-orm": "^0.44.2"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
+    "bcryptjs": "^3.0.3",
+    "drizzle-kit": "^0.31.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.8.3"
+  }
+}

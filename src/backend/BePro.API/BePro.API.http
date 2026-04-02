@@ -1,6 +1,0 @@
-@BePro.API_HostAddress = http://localhost:5062
-
-GET {{BePro.API_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
