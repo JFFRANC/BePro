@@ -8,7 +8,16 @@ const app = new Hono<HonoEnv>();
 app.use(
   "*",
   cors({
-    origin: ["http://localhost:5173"],
+    origin: (origin) => {
+      const allowed = [
+        "http://localhost:5173",
+        "https://bepro-web.pages.dev",
+      ];
+      // Allow all Pages preview/deployment URLs
+      if (origin?.endsWith(".bepro-web.pages.dev")) return origin;
+      if (allowed.includes(origin)) return origin;
+      return allowed[0];
+    },
     credentials: true,
     allowHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
