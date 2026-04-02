@@ -9,7 +9,15 @@
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "format": "prettier --write .",
-    "clean": "turbo clean"
+    "format:check": "prettier --check .",
+    "clean": "turbo clean",
+    "check": "turbo lint typecheck test",
+    "db:setup": "pnpm --filter @bepro/db db:setup",
+    "db:seed": "pnpm --filter @bepro/db db:seed",
+    "db:push": "pnpm --filter @bepro/db db:push",
+    "db:generate": "pnpm --filter @bepro/db db:generate",
+    "db:studio": "pnpm --filter @bepro/db db:studio",
+    "db:reset": "pnpm --filter @bepro/db db:reset"
   },
   "devDependencies": {
     "prettier": "^3.5.3",
