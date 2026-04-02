@@ -43,3 +43,10 @@ coverage/
 
 # Drizzle
 drizzle/meta/
+
+# Database
+*.mdf
+*.ldf
+
+# Archivos internos de administración
+ADMIN_GENERAL/
