@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { ErrorBoundary } from "@/components/error-boundary";
 
-function BrokenComponent(): JSX.Element {
+function BrokenComponent(): React.ReactNode {
   throw new Error("Test crash");
 }
 
