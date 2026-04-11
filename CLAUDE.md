@@ -148,6 +148,8 @@ Per-domain CLAUDE.md files:
 - TypeScript 5.x (strict mode) + Hono 4.x (`hono/jwt`, `hono/cookie` for auth), bcryptjs 2.x (password hashing), Drizzle ORM 0.44.x, @neondatabase/serverless 1.x
 - Neon PostgreSQL (serverless) via HTTP driver (`drizzle-orm/neon-http`) with batch transactions for RLS (`SET LOCAL`)
 - Zod 4.x (shared validation schemas in `packages/shared`)
+- TypeScript 5.8.3 (strict mode) + React 19.1, Tailwind CSS 4.1.10 (`@tailwindcss/vite`), class-variance-authority 0.7.1, lucide-react, sonner, clsx + tailwind-merge (003-design-system)
+- N/A (CSS tokens only; tenant theme storage deferred to tenant module) (003-design-system)
 
 ## Recent Changes
 - 002-jwt-auth-module: JWT auth with opaque refresh tokens (httpOnly cookie), tenant resolution via slug, per-account brute-force lockout, role-based middleware, RLS tenant isolation

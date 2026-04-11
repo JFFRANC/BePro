@@ -25,8 +25,8 @@ export interface IClientAssignmentDto {
   userId: string;
   userFullName: string;
   userRole: string;
-  leaderId?: string;
-  leaderFullName?: string;
+  accountExecutiveId?: string;
+  accountExecutiveFullName?: string;
 }
 
 export interface ICreateClientRequest {
@@ -46,5 +46,5 @@ export interface IUpdateClientRequest {
 
 export interface IAssignUserRequest {
   userId: string;
-  leaderId?: string;
+  accountExecutiveId?: string;
 }

@@ -11,19 +11,19 @@ export type CandidateStatus =
   | "hired"
   | "in_guarantee"
   | "guarantee_met"
-  | "guarantee_failed"
+  | "termination"
   | "replacement";
 
 export type RejectionCategory =
-  | "interview"
-  | "medical_exam"
-  | "background_check"
-  | "documentation"
-  | "no_show"
-  | "salary"
-  | "schedule"
-  | "transportation"
+  | "interview_performance"
+  | "salary_expectations"
+  | "schedule_incompatibility"
+  | "location_distance"
   | "personal_decision"
+  | "age_requirements"
+  | "experience_level"
+  | "documentation_issues"
+  | "health_requirements"
   | "other";
 
 export interface ICandidateDto {
@@ -45,8 +45,8 @@ export interface ICandidateDto {
   rejectionDetails?: string;
   recruiterId: string;
   recruiterFullName: string;
-  leaderId: string;
-  leaderFullName: string;
+  accountExecutiveId: string;
+  accountExecutiveFullName: string;
   clientId: string;
   clientName: string;
   createdAt: string;

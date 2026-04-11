@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -6,8 +8,8 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-heading);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -25,6 +27,7 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -44,75 +47,302 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Extended semantic colors */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  /* Badge status colors */
+  --color-badge-registered: var(--badge-registered-bg);
+  --color-badge-registered-fg: var(--badge-registered-fg);
+  --color-badge-interview-scheduled: var(--badge-interview-scheduled-bg);
+  --color-badge-interview-scheduled-fg: var(--badge-interview-scheduled-fg);
+  --color-badge-attended: var(--badge-attended-bg);
+  --color-badge-attended-fg: var(--badge-attended-fg);
+  --color-badge-pending: var(--badge-pending-bg);
+  --color-badge-pending-fg: var(--badge-pending-fg);
+  --color-badge-approved: var(--badge-approved-bg);
+  --color-badge-approved-fg: var(--badge-approved-fg);
+  --color-badge-hired: var(--badge-hired-bg);
+  --color-badge-hired-fg: var(--badge-hired-fg);
+  --color-badge-in-guarantee: var(--badge-in-guarantee-bg);
+  --color-badge-in-guarantee-fg: var(--badge-in-guarantee-fg);
+  --color-badge-guarantee-met: var(--badge-guarantee-met-bg);
+  --color-badge-guarantee-met-fg: var(--badge-guarantee-met-fg);
+  --color-badge-rejected: var(--badge-rejected-bg);
+  --color-badge-rejected-fg: var(--badge-rejected-fg);
+  --color-badge-declined: var(--badge-declined-bg);
+  --color-badge-declined-fg: var(--badge-declined-fg);
+  --color-badge-no-show: var(--badge-no-show-bg);
+  --color-badge-no-show-fg: var(--badge-no-show-fg);
+  --color-badge-termination: var(--badge-termination-bg);
+  --color-badge-termination-fg: var(--badge-termination-fg);
+  --color-badge-discarded: var(--badge-discarded-bg);
+  --color-badge-discarded-fg: var(--badge-discarded-fg);
+  --color-badge-replacement: var(--badge-replacement-bg);
+  --color-badge-replacement-fg: var(--badge-replacement-fg);
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Brand / Primary (teal-green H:175) */
+  --primary: oklch(0.45 0.12 175);
+  --primary-foreground: oklch(0.98 0.005 175);
+
+  /* Secondary (desaturated teal) */
+  --secondary: oklch(0.95 0.02 175);
+  --secondary-foreground: oklch(0.25 0.04 175);
+
+  /* Accent (warm teal-cyan) */
+  --accent: oklch(0.93 0.03 185);
+  --accent-foreground: oklch(0.22 0.05 185);
+
+  /* Muted (neutral with teal tint) */
+  --muted: oklch(0.96 0.008 175);
+  --muted-foreground: oklch(0.50 0.02 175);
+
+  /* Destructive (red H:25) */
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.98 0.01 25);
+
+  /* Success (green H:145) */
+  --success: oklch(0.52 0.14 145);
+  --success-foreground: oklch(0.98 0.01 145);
+
+  /* Warning (amber H:85) */
+  --warning: oklch(0.75 0.16 85);
+  --warning-foreground: oklch(0.25 0.05 85);
+
+  /* Info (blue H:245) */
+  --info: oklch(0.55 0.14 245);
+  --info-foreground: oklch(0.98 0.01 245);
+
+  /* Surfaces */
+  --background: oklch(0.995 0.002 175);
+  --foreground: oklch(0.17 0.02 175);
+  --card: oklch(1.0 0 0);
+  --card-foreground: oklch(0.17 0.02 175);
+  --popover: oklch(0.99 0.003 175);
+  --popover-foreground: oklch(0.17 0.02 175);
+
+  /* Borders & Inputs */
+  --border: oklch(0.90 0.01 175);
+  --input: oklch(0.88 0.012 175);
+  --ring: oklch(0.55 0.12 175);
+
+  /* Charts */
+  --chart-1: oklch(0.55 0.12 175);
+  --chart-2: oklch(0.60 0.14 245);
+  --chart-3: oklch(0.65 0.16 145);
+  --chart-4: oklch(0.72 0.14 85);
+  --chart-5: oklch(0.58 0.18 330);
+
+  /* Sidebar */
+  --sidebar: oklch(0.97 0.008 175);
+  --sidebar-foreground: oklch(0.20 0.03 175);
+  --sidebar-primary: oklch(0.45 0.12 175);
+  --sidebar-primary-foreground: oklch(0.98 0.005 175);
+  --sidebar-accent: oklch(0.93 0.025 175);
+  --sidebar-accent-foreground: oklch(0.22 0.05 175);
+  --sidebar-border: oklch(0.90 0.01 175);
+  --sidebar-ring: oklch(0.55 0.12 175);
+
+  /* Badge — Progress group (blue-teal H:185-240) */
+  --badge-registered-bg: oklch(0.92 0.04 220);
+  --badge-registered-fg: oklch(0.35 0.08 220);
+  --badge-interview-scheduled-bg: oklch(0.90 0.05 200);
+  --badge-interview-scheduled-fg: oklch(0.32 0.09 200);
+  --badge-attended-bg: oklch(0.89 0.05 185);
+  --badge-attended-fg: oklch(0.30 0.10 185);
+  --badge-pending-bg: oklch(0.91 0.04 240);
+  --badge-pending-fg: oklch(0.35 0.08 240);
+
+  /* Badge — Success group (green H:135-158) */
+  --badge-approved-bg: oklch(0.92 0.05 150);
+  --badge-approved-fg: oklch(0.30 0.10 150);
+  --badge-hired-bg: oklch(0.90 0.06 140);
+  --badge-hired-fg: oklch(0.28 0.11 140);
+  --badge-in-guarantee-bg: oklch(0.91 0.05 158);
+  --badge-in-guarantee-fg: oklch(0.32 0.09 158);
+  --badge-guarantee-met-bg: oklch(0.93 0.04 135);
+  --badge-guarantee-met-fg: oklch(0.30 0.10 135);
+
+  /* Badge — Negative group (red-orange H:15-50) */
+  --badge-rejected-bg: oklch(0.92 0.04 25);
+  --badge-rejected-fg: oklch(0.40 0.14 25);
+  --badge-declined-bg: oklch(0.91 0.05 35);
+  --badge-declined-fg: oklch(0.38 0.13 35);
+  --badge-no-show-bg: oklch(0.92 0.04 50);
+  --badge-no-show-fg: oklch(0.38 0.12 50);
+  --badge-termination-bg: oklch(0.91 0.05 15);
+  --badge-termination-fg: oklch(0.35 0.16 15);
+
+  /* Badge — Neutral-terminal group (gray, low chroma) */
+  --badge-discarded-bg: oklch(0.93 0.005 175);
+  --badge-discarded-fg: oklch(0.42 0.015 175);
+  --badge-replacement-bg: oklch(0.91 0.008 200);
+  --badge-replacement-fg: oklch(0.40 0.02 200);
+
+  /* Radius */
+  --radius: 0.5rem;
+
+  /* Typography */
+  --font-heading: 'Fraunces', serif;
+  --font-sans: 'Source Sans 3', 'Source Sans Pro', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+
+  /* Type scale (1.25 Major Third) */
+  --text-h1-size: 2.441rem;
+  --text-h1-line-height: 1.15;
+  --text-h1-letter-spacing: -0.025em;
+  --text-h1-weight: 700;
+  --text-h2-size: 1.953rem;
+  --text-h2-line-height: 1.2;
+  --text-h2-letter-spacing: -0.02em;
+  --text-h2-weight: 600;
+  --text-h3-size: 1.563rem;
+  --text-h3-line-height: 1.3;
+  --text-h3-letter-spacing: -0.015em;
+  --text-h3-weight: 600;
+  --text-h4-size: 1.25rem;
+  --text-h4-line-height: 1.4;
+  --text-h4-letter-spacing: -0.01em;
+  --text-h4-weight: 600;
+  --text-body-size: 1rem;
+  --text-body-line-height: 1.6;
+  --text-body-letter-spacing: 0em;
+  --text-body-weight: 400;
+  --text-small-size: 0.8rem;
+  --text-small-line-height: 1.5;
+  --text-small-letter-spacing: 0.01em;
+  --text-small-weight: 400;
+  --text-caption-size: 0.64rem;
+  --text-caption-line-height: 1.4;
+  --text-caption-letter-spacing: 0.02em;
+  --text-caption-weight: 500;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Brand / Primary (lighter teal for dark surfaces) */
+  --primary: oklch(0.72 0.10 175);
+  --primary-foreground: oklch(0.15 0.04 175);
+
+  /* Secondary */
+  --secondary: oklch(0.25 0.03 175);
+  --secondary-foreground: oklch(0.90 0.015 175);
+
+  /* Accent */
+  --accent: oklch(0.28 0.04 185);
+  --accent-foreground: oklch(0.92 0.015 185);
+
+  /* Muted */
+  --muted: oklch(0.24 0.015 175);
+  --muted-foreground: oklch(0.65 0.02 175);
+
+  /* Destructive */
+  --destructive: oklch(0.68 0.18 25);
+  --destructive-foreground: oklch(0.15 0.04 25);
+
+  /* Success */
+  --success: oklch(0.68 0.12 145);
+  --success-foreground: oklch(0.15 0.04 145);
+
+  /* Warning */
+  --warning: oklch(0.78 0.14 85);
+  --warning-foreground: oklch(0.20 0.05 85);
+
+  /* Info */
+  --info: oklch(0.70 0.12 245);
+  --info-foreground: oklch(0.15 0.04 245);
+
+  /* Surfaces */
+  --background: oklch(0.14 0.01 175);
+  --foreground: oklch(0.93 0.008 175);
+  --card: oklch(0.19 0.015 175);
+  --card-foreground: oklch(0.93 0.008 175);
+  --popover: oklch(0.19 0.015 175);
+  --popover-foreground: oklch(0.93 0.008 175);
+
+  /* Borders & Inputs */
+  --border: oklch(0.30 0.015 175);
+  --input: oklch(0.30 0.015 175);
+  --ring: oklch(0.72 0.10 175);
+
+  /* Charts */
+  --chart-1: oklch(0.72 0.10 175);
+  --chart-2: oklch(0.70 0.12 245);
+  --chart-3: oklch(0.68 0.12 145);
+  --chart-4: oklch(0.78 0.14 85);
+  --chart-5: oklch(0.70 0.15 330);
+
+  /* Sidebar */
+  --sidebar: oklch(0.17 0.015 175);
+  --sidebar-foreground: oklch(0.90 0.008 175);
+  --sidebar-primary: oklch(0.72 0.10 175);
+  --sidebar-primary-foreground: oklch(0.15 0.04 175);
+  --sidebar-accent: oklch(0.25 0.03 175);
+  --sidebar-accent-foreground: oklch(0.90 0.015 175);
+  --sidebar-border: oklch(0.30 0.015 175);
+  --sidebar-ring: oklch(0.72 0.10 175);
+
+  /* Badge — Progress group */
+  --badge-registered-bg: oklch(0.28 0.05 220);
+  --badge-registered-fg: oklch(0.80 0.06 220);
+  --badge-interview-scheduled-bg: oklch(0.26 0.06 200);
+  --badge-interview-scheduled-fg: oklch(0.82 0.05 200);
+  --badge-attended-bg: oklch(0.25 0.06 185);
+  --badge-attended-fg: oklch(0.80 0.06 185);
+  --badge-pending-bg: oklch(0.27 0.05 240);
+  --badge-pending-fg: oklch(0.82 0.05 240);
+
+  /* Badge — Success group */
+  --badge-approved-bg: oklch(0.26 0.06 150);
+  --badge-approved-fg: oklch(0.82 0.06 150);
+  --badge-hired-bg: oklch(0.25 0.07 140);
+  --badge-hired-fg: oklch(0.83 0.06 140);
+  --badge-in-guarantee-bg: oklch(0.27 0.06 158);
+  --badge-in-guarantee-fg: oklch(0.80 0.05 158);
+  --badge-guarantee-met-bg: oklch(0.28 0.05 135);
+  --badge-guarantee-met-fg: oklch(0.83 0.05 135);
+
+  /* Badge — Negative group */
+  --badge-rejected-bg: oklch(0.28 0.06 25);
+  --badge-rejected-fg: oklch(0.82 0.08 25);
+  --badge-declined-bg: oklch(0.27 0.06 35);
+  --badge-declined-fg: oklch(0.83 0.07 35);
+  --badge-no-show-bg: oklch(0.28 0.05 50);
+  --badge-no-show-fg: oklch(0.82 0.07 50);
+  --badge-termination-bg: oklch(0.26 0.07 15);
+  --badge-termination-fg: oklch(0.83 0.09 15);
+
+  /* Badge — Neutral-terminal group */
+  --badge-discarded-bg: oklch(0.28 0.005 175);
+  --badge-discarded-fg: oklch(0.72 0.01 175);
+  --badge-replacement-bg: oklch(0.27 0.008 200);
+  --badge-replacement-fg: oklch(0.73 0.015 200);
+}
+
+/* sRGB fallbacks for browsers without OKLch support */
+@supports not (color: oklch(0 0 0)) {
+  :root {
+    --primary: #1a8a7a;
+    --primary-foreground: #f5fdfc;
+    --destructive: #d63031;
+    --destructive-foreground: #fef2f2;
+    --background: #fafffe;
+    --foreground: #1a2b28;
+  }
+  .dark {
+    --primary: #5ecfbe;
+    --primary-foreground: #0d2622;
+    --destructive: #e57373;
+    --destructive-foreground: #1a0f0f;
+    --background: #0f1f1c;
+    --foreground: #e8f5f2;
+  }
 }
 
 @layer base {
@@ -124,5 +354,77 @@
   }
   html {
     @apply font-sans;
+  }
+
+  /* Heading typography */
+  h1 {
+    font-family: var(--font-heading);
+    font-size: var(--text-h1-size);
+    line-height: var(--text-h1-line-height);
+    letter-spacing: var(--text-h1-letter-spacing);
+    font-weight: var(--text-h1-weight);
+  }
+  h2 {
+    font-family: var(--font-heading);
+    font-size: var(--text-h2-size);
+    line-height: var(--text-h2-line-height);
+    letter-spacing: var(--text-h2-letter-spacing);
+    font-weight: var(--text-h2-weight);
+  }
+  h3 {
+    font-family: var(--font-heading);
+    font-size: var(--text-h3-size);
+    line-height: var(--text-h3-line-height);
+    letter-spacing: var(--text-h3-letter-spacing);
+    font-weight: var(--text-h3-weight);
+  }
+  h4 {
+    font-family: var(--font-heading);
+    font-size: var(--text-h4-size);
+    line-height: var(--text-h4-line-height);
+    letter-spacing: var(--text-h4-letter-spacing);
+    font-weight: var(--text-h4-weight);
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* Layout utilities */
+@utility auth-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  min-height: 100dvh;
+  @media (width >= 1024px) {
+    grid-template-columns: 2fr 3fr;
+  }
+}
+
+@utility dashboard-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  min-height: 100dvh;
+  @media (width >= 1024px) {
+    grid-template-columns: 16rem 1fr;
+  }
+}
+
+@utility page-container {
+  max-width: 80rem;
+  margin-inline: auto;
+  padding-inline: 1rem;
+  @media (width >= 640px) {
+    padding-inline: 1.5rem;
+  }
+  @media (width >= 1024px) {
+    padding-inline: 2rem;
   }
 }

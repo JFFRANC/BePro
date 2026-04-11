@@ -50,3 +50,11 @@ drizzle/meta/
 
 # Archivos internos de administración
 ADMIN_GENERAL/
+
+# Claude/Playwright temp files
+.playwright-mcp/
+.superpowers/
+.claude/
+
+# Screenshots (temp)
+*.png
