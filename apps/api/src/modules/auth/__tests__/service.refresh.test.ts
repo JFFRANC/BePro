@@ -33,7 +33,7 @@ function createMockToken(overrides = {}) {
 function createMockUser(overrides = {}) {
   return {
     id: "user-uuid-1",
-    tenantId: "tenant-uuid-1",
+    tenantId: "d9eb10b9-d578-48d7-a70c-5525a9c9eb47",
     email: "user@example.com",
     passwordHash: "hashed",
     firstName: "Juan",

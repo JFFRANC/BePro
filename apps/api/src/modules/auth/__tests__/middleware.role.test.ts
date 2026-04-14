@@ -29,7 +29,7 @@ async function createToken(role: string) {
       sub: "user-uuid-1",
       email: "user@example.com",
       role,
-      tenantId: "tenant-uuid-1",
+      tenantId: "d9eb10b9-d578-48d7-a70c-5525a9c9eb47",
       isFreelancer: false,
       iat: now,
       exp: now + 900,

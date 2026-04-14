@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { HonoEnv } from "./types.js";
 import authRoutes from "./modules/auth/routes.js";
+import { usersRoutes } from "./modules/users/routes.js";
 
 const app = new Hono<HonoEnv>();
 
@@ -32,5 +33,6 @@ app.get("/health", (c) => {
 });
 
 app.route("/api/auth", authRoutes);
+app.route("/api/users", usersRoutes);
 
 export default app;

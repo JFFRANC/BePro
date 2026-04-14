@@ -1,4 +1,4 @@
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, QueryErrorResetBoundary } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { queryClient } from "@/lib/query-client";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -9,10 +9,17 @@ import { ConfirmDialogProvider } from "@/components/confirm-dialog";
 import { ErrorPage } from "@/components/error-page";
 import { LoginPage } from "@/modules/auth/pages/LoginPage";
 import { useAuth } from "@/modules/auth/hooks/useAuth";
+import { AbilityProvider } from "@/components/ability-provider";
+import { defineAbilityFor } from "@/lib/ability";
 import { PreviewPage } from "@/modules/design-system/pages/PreviewPage";
+import { UsersPage } from "@/modules/users/pages/UsersPage";
+import { UserDetailPage } from "@/modules/users/pages/UserDetailPage";
+import { ForcePasswordChangePage } from "@/modules/users/pages/ForcePasswordChangePage";
+import { useLocation } from "react-router-dom";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -26,7 +33,18 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />;
   }
 
-  return <>{children}</>;
+  // Forced password change — redirect to change-password unless already there
+  if (user?.mustChangePassword && location.pathname !== "/change-password") {
+    return <Navigate to="/change-password" replace />;
+  }
+
+  const ability = defineAbilityFor({ role: user!.role, id: user!.id });
+
+  return (
+    <AbilityProvider ability={ability}>
+      {children}
+    </AbilityProvider>
+  );
 }
 
 function DashboardPage() {
@@ -59,11 +77,21 @@ export function App() {
       <QueryClientProvider client={queryClient}>
         <ConfirmDialogProvider>
           <BrowserRouter>
-            <ErrorBoundary>
+            <QueryErrorResetBoundary>
+              {({ reset }) => (
+            <ErrorBoundary onReset={reset}>
               <OfflineBanner />
               <Routes>
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/design-system" element={<PreviewPage />} />
+                <Route
+                  path="/change-password"
+                  element={
+                    <RequireAuth>
+                      <ForcePasswordChangePage />
+                    </RequireAuth>
+                  }
+                />
                 <Route path="/403" element={<ErrorPage code={403} />} />
                 <Route
                   path="/"
@@ -73,9 +101,27 @@ export function App() {
                     </RequireAuth>
                   }
                 />
+                <Route
+                  path="/users"
+                  element={
+                    <RequireAuth>
+                      <UsersPage />
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/users/:id"
+                  element={
+                    <RequireAuth>
+                      <UserDetailPage />
+                    </RequireAuth>
+                  }
+                />
                 <Route path="*" element={<ErrorPage code={404} />} />
               </Routes>
             </ErrorBoundary>
+              )}
+            </QueryErrorResetBoundary>
           </BrowserRouter>
           <Toaster />
         </ConfirmDialogProvider>

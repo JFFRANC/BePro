@@ -18,7 +18,7 @@ const TEST_ENV = {
 
 function createMockTenant(overrides = {}) {
   return {
-    id: "tenant-uuid-1",
+    id: "d9eb10b9-d578-48d7-a70c-5525a9c9eb47",
     name: "Test Tenant",
     slug: "test-tenant",
     isActive: true,
@@ -55,7 +55,7 @@ async function createToken(overrides = {}) {
       sub: "user-uuid-1",
       email: "user@example.com",
       role: "admin",
-      tenantId: "tenant-uuid-1",
+      tenantId: "d9eb10b9-d578-48d7-a70c-5525a9c9eb47",
       isFreelancer: false,
       iat: now,
       exp: now + 900,
@@ -95,7 +95,7 @@ describe("tenantMiddleware", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, any>;
-    expect(body.tenantId).toBe("tenant-uuid-1");
+    expect(body.tenantId).toBe("d9eb10b9-d578-48d7-a70c-5525a9c9eb47");
   });
 
   it("rejects request if tenant is inactive", async () => {

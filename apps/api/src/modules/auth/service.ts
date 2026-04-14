@@ -24,11 +24,35 @@ export function recordAuditEvent(_event: AuditEvent): void {
   // No-op until audit module is implemented
 }
 
-const ACCESS_TOKEN_EXPIRY_SECONDS = 15 * 60; // 15 minutes
+export const ACCESS_TOKEN_EXPIRY_SECONDS = 15 * 60; // 15 minutes
 const REFRESH_TOKEN_EXPIRY_DAYS = 7;
 const BRUTE_FORCE_MAX_ATTEMPTS = 5;
 const BRUTE_FORCE_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 const DUMMY_HASH = "$2a$12$000000000000000000000uGEApfMlqzMdLRPnmsJMKuPfJtLHfyta";
+
+export async function generateAccessToken(
+  user: { id: string; email: string; role: string; tenantId: string; isFreelancer: boolean; mustChangePassword: boolean },
+  jwtSecret: string,
+): Promise<{ accessToken: string; expiresAt: string }> {
+  const now = Math.floor(Date.now() / 1000);
+  const exp = now + ACCESS_TOKEN_EXPIRY_SECONDS;
+
+  const accessToken = await sign(
+    {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      tenantId: user.tenantId,
+      isFreelancer: user.isFreelancer,
+      mustChangePassword: user.mustChangePassword,
+      iat: now,
+      exp,
+    },
+    jwtSecret,
+  );
+
+  return { accessToken, expiresAt: new Date(exp * 1000).toISOString() };
+}
 
 async function hashToken(token: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -105,13 +129,16 @@ export async function login(
     return null;
   }
 
-  // Step 5: Successful login — reset brute-force counters
-  if (user.failedLoginCount > 0 || user.firstFailedAt || user.lockedUntil) {
-    await db
-      .update(users)
-      .set({ failedLoginCount: 0, firstFailedAt: null, lockedUntil: null })
-      .where(eq(users.id, user.id));
-  }
+  // Step 5: Successful login — reset brute-force counters and set lastLoginAt
+  await db
+    .update(users)
+    .set({
+      failedLoginCount: 0,
+      firstFailedAt: null,
+      lockedUntil: null,
+      lastLoginAt: new Date(),
+    })
+    .where(eq(users.id, user.id));
 
   // Step 6: Generate JWT access token
   const now = Math.floor(Date.now() / 1000);
@@ -124,6 +151,7 @@ export async function login(
       role: user.role,
       tenantId: user.tenantId,
       isFreelancer: user.isFreelancer,
+      mustChangePassword: user.mustChangePassword,
       iat: now,
       exp,
     },
@@ -158,6 +186,7 @@ export async function login(
       role: user.role as AuthResult["user"]["role"],
       tenantId: user.tenantId,
       isFreelancer: user.isFreelancer,
+      mustChangePassword: user.mustChangePassword,
     },
     refreshToken: rawRefreshToken,
   };
@@ -227,6 +256,7 @@ export async function refresh(
       role: user.role,
       tenantId: user.tenantId,
       isFreelancer: user.isFreelancer,
+      mustChangePassword: user.mustChangePassword,
       iat: now,
       exp,
     },
@@ -260,6 +290,7 @@ export async function refresh(
       role: user.role as AuthResult["user"]["role"],
       tenantId: user.tenantId,
       isFreelancer: user.isFreelancer,
+      mustChangePassword: user.mustChangePassword,
     },
     refreshToken: newRawToken,
   };
