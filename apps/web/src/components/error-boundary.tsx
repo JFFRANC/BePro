@@ -4,6 +4,7 @@ import { ErrorPage } from "@/components/error-page";
 
 interface Props {
   children: ReactNode;
+  onReset?: () => void;
 }
 
 interface State {
@@ -29,7 +30,10 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <ErrorPage
           code={500}
-          onRetry={() => this.setState({ hasError: false })}
+          onRetry={() => {
+            this.props.onReset?.();
+            this.setState({ hasError: false });
+          }}
         />
       );
     }

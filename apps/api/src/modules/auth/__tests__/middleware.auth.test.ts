@@ -28,7 +28,7 @@ async function createValidToken(overrides = {}) {
       sub: "user-uuid-1",
       email: "user@example.com",
       role: "admin",
-      tenantId: "tenant-uuid-1",
+      tenantId: "d9eb10b9-d578-48d7-a70c-5525a9c9eb47",
       isFreelancer: false,
       iat: now,
       exp: now + 900,
@@ -67,7 +67,7 @@ describe("authMiddleware", () => {
         sub: "user-uuid-1",
         email: "user@example.com",
         role: "admin",
-        tenantId: "tenant-uuid-1",
+        tenantId: "d9eb10b9-d578-48d7-a70c-5525a9c9eb47",
         isFreelancer: false,
         iat: Math.floor(Date.now() / 1000) - 3600,
         exp: Math.floor(Date.now() / 1000) - 1800,
@@ -90,7 +90,7 @@ describe("authMiddleware", () => {
         sub: "user-uuid-1",
         email: "user@example.com",
         role: "admin",
-        tenantId: "tenant-uuid-1",
+        tenantId: "d9eb10b9-d578-48d7-a70c-5525a9c9eb47",
         isFreelancer: false,
         iat: Math.floor(Date.now() / 1000),
         exp: Math.floor(Date.now() / 1000) + 900,
@@ -122,6 +122,6 @@ describe("authMiddleware", () => {
     expect(body.user.id).toBe("user-uuid-1");
     expect(body.user.email).toBe("user@example.com");
     expect(body.user.role).toBe("admin");
-    expect(body.user.tenantId).toBe("tenant-uuid-1");
+    expect(body.user.tenantId).toBe("d9eb10b9-d578-48d7-a70c-5525a9c9eb47");
   });
 });

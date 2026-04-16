@@ -8,8 +8,10 @@ export interface IUserDto {
   role: UserRole;
   isFreelancer: boolean;
   isActive: boolean;
+  mustChangePassword: boolean;
+  lastLoginAt: string | null;
   createdAt: string;
-  lastLoginAt?: string;
+  updatedAt: string;
 }
 
 export interface ICreateUserRequest {
@@ -25,5 +27,32 @@ export interface IUpdateUserRequest {
   firstName?: string;
   lastName?: string;
   role?: UserRole;
-  isActive?: boolean;
+  isFreelancer?: boolean;
+}
+
+export interface IUserListResponse {
+  data: IUserDto[];
+  pagination: IPaginationMeta;
+}
+
+export interface IPaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface IBulkImportResult {
+  totalRows: number;
+  successCount: number;
+  errorCount: number;
+  results: IBulkImportRowResult[];
+}
+
+export interface IBulkImportRowResult {
+  row: number;
+  status: "success" | "error";
+  email: string;
+  temporaryPassword?: string;
+  error?: string;
 }

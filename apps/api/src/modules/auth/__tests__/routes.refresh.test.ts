@@ -37,8 +37,9 @@ function mockRefreshSuccess(): AuthResult {
       firstName: "Juan",
       lastName: "Perez",
       role: "admin",
-      tenantId: "tenant-uuid-1",
+      tenantId: "d9eb10b9-d578-48d7-a70c-5525a9c9eb47",
       isFreelancer: false,
+      mustChangePassword: false,
     },
     refreshToken: "mock-new-refresh-uuid",
   };

@@ -150,6 +150,8 @@ Per-domain CLAUDE.md files:
 - Zod 4.x (shared validation schemas in `packages/shared`)
 - TypeScript 5.8.3 (strict mode) + React 19.1, Tailwind CSS 4.1.10 (`@tailwindcss/vite`), class-variance-authority 0.7.1, lucide-react, sonner, clsx + tailwind-merge (003-design-system)
 - N/A (CSS tokens only; tenant theme storage deferred to tenant module) (003-design-system)
+- TypeScript 5.8.3 (strict mode) + Hono 4.7.10 (API), Drizzle ORM 0.44.7 (DB), React 19.1 (UI), Zod 4.3.6 (validation), bcryptjs 2.x (password hashing), TanStack Query (server state), Zustand (client state), shadcn/ui + Tailwind CSS 4.x (components) (004-users-module)
+- Neon PostgreSQL (serverless) with Row-Level Security via `drizzle-orm/neon-http` (004-users-module)
 
 ## Recent Changes
 - 002-jwt-auth-module: JWT auth with opaque refresh tokens (httpOnly cookie), tenant resolution via slug, per-account brute-force lockout, role-based middleware, RLS tenant isolation

@@ -26,6 +26,7 @@ export const authMiddleware: MiddlewareHandler<HonoEnv> = async (c, next) => {
       role: payload.role,
       tenantId: payload.tenantId,
       isFreelancer: payload.isFreelancer,
+      mustChangePassword: payload.mustChangePassword ?? false,
     });
 
     await next();
@@ -49,9 +50,18 @@ export const tenantMiddleware: MiddlewareHandler<HonoEnv> = async (c, next) => {
 
   c.set("tenantId", tenant.id);
 
-  // Wrap downstream handlers in a transaction with SET LOCAL for RLS enforcement
+  // Defense-in-depth: validate UUID format before interpolating via sql.raw().
+  // tenant.id is a DB-generated UUID so this is structurally safe, but the check
+  // makes the safety self-evident and guards against future schema changes.
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID_RE.test(tenant.id)) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  // Wrap downstream handlers in a transaction with SET LOCAL for RLS enforcement.
+  // sql.raw() is used because SET LOCAL does not support $1 parameterized values.
   await db.transaction(async (tx) => {
-    await tx.execute(sql`SET LOCAL app.tenant_id = ${tenant.id}`);
+    await tx.execute(sql`SET LOCAL app.tenant_id = '${sql.raw(tenant.id)}'`);
     c.set("db", tx as unknown as typeof db);
     await next();
   });

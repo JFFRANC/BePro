@@ -25,7 +25,7 @@ const JWT_SECRET = "test-secret-key-256-bits-long!!";
 
 function createMockTenant() {
   return {
-    id: "tenant-uuid-1",
+    id: "d9eb10b9-d578-48d7-a70c-5525a9c9eb47",
     name: "Test",
     slug: "test",
     isActive: true,
@@ -37,7 +37,7 @@ function createMockTenant() {
 function createMockUser(overrides = {}) {
   return {
     id: "user-uuid-1",
-    tenantId: "tenant-uuid-1",
+    tenantId: "d9eb10b9-d578-48d7-a70c-5525a9c9eb47",
     email: "user@example.com",
     passwordHash: "$2a$12$hash",
     firstName: "Juan",

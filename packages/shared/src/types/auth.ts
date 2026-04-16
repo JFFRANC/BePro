@@ -12,6 +12,7 @@ export interface ICurrentUser {
   role: UserRole;
   tenantId: string;
   isFreelancer: boolean;
+  mustChangePassword: boolean;
 }
 
 export interface ILoginRequest {

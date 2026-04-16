@@ -28,7 +28,7 @@ const JWT_SECRET = "test-secret-key-256-bits-long!!";
 
 function createMockTenant(overrides = {}) {
   return {
-    id: "tenant-uuid-1",
+    id: "d9eb10b9-d578-48d7-a70c-5525a9c9eb47",
     name: "Test Tenant",
     slug: "test-tenant",
     isActive: true,
@@ -41,7 +41,7 @@ function createMockTenant(overrides = {}) {
 function createMockUser(overrides = {}) {
   return {
     id: "user-uuid-1",
-    tenantId: "tenant-uuid-1",
+    tenantId: "d9eb10b9-d578-48d7-a70c-5525a9c9eb47",
     email: "user@example.com",
     passwordHash: "$2a$12$hashedpassword",
     firstName: "Juan",
@@ -52,6 +52,8 @@ function createMockUser(overrides = {}) {
     failedLoginCount: 0,
     firstFailedAt: null,
     lockedUntil: null,
+    lastLoginAt: null,
+    mustChangePassword: false,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -115,7 +117,7 @@ describe("login service", () => {
     expect(auth.accessToken).toBeDefined();
     expect(auth.user.email).toBe("user@example.com");
     expect(auth.user.role).toBe("admin");
-    expect(auth.user.tenantId).toBe("tenant-uuid-1");
+    expect(auth.user.tenantId).toBe("d9eb10b9-d578-48d7-a70c-5525a9c9eb47");
     expect(auth.refreshToken).toBeDefined();
     expect(auth.expiresAt).toBeDefined();
   });
@@ -184,9 +186,46 @@ describe("login service", () => {
 
     await login(db as never, validParams, JWT_SECRET);
 
-    // Second where() call is the user lookup — verify it was called
-    // (the actual drizzle `and(eq(...), eq(...))` produces a single argument)
-    expect(mockDb.where).toHaveBeenCalledTimes(2);
+    // where() is called: (1) tenant lookup, (2) user lookup, (3) update lastLoginAt
+    expect(mockDb.where).toHaveBeenCalledTimes(3);
+  });
+
+  it("sets lastLoginAt on successful login", async () => {
+    const db = createMockDb();
+    vi.mocked(compare).mockResolvedValue(true as never);
+    const mockDb = db as { update: ReturnType<typeof vi.fn>; set: ReturnType<typeof vi.fn> };
+
+    await login(db as never, validParams, JWT_SECRET);
+
+    // The update().set() call after successful login should include lastLoginAt
+    const setCalls = mockDb.set.mock.calls;
+    const lastSetCall = setCalls[setCalls.length - 1][0];
+    expect(lastSetCall).toHaveProperty("lastLoginAt");
+    expect(lastSetCall.lastLoginAt).toBeInstanceOf(Date);
+  });
+
+  it("includes mustChangePassword in returned user", async () => {
+    const db = createMockDb({
+      user: createMockUser({ mustChangePassword: true }),
+    });
+    vi.mocked(compare).mockResolvedValue(true as never);
+
+    const result = await login(db as never, validParams, JWT_SECRET);
+
+    const auth = result as AuthResult;
+    expect(auth.user.mustChangePassword).toBe(true);
+  });
+
+  it("includes mustChangePassword false when user has already changed password", async () => {
+    const db = createMockDb({
+      user: createMockUser({ mustChangePassword: false }),
+    });
+    vi.mocked(compare).mockResolvedValue(true as never);
+
+    const result = await login(db as never, validParams, JWT_SECRET);
+
+    const auth = result as AuthResult;
+    expect(auth.user.mustChangePassword).toBe(false);
   });
 
   it("returns null for user in different tenant", async () => {

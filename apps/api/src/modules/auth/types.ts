@@ -6,6 +6,7 @@ export interface JwtPayload {
   role: UserRole;
   tenantId: string;
   isFreelancer: boolean;
+  mustChangePassword: boolean;
   iat: number;
   exp: number;
 }
@@ -21,6 +22,7 @@ export interface AuthResult {
     role: UserRole;
     tenantId: string;
     isFreelancer: boolean;
+    mustChangePassword: boolean;
   };
   refreshToken: string;
 }

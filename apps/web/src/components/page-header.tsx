@@ -11,7 +11,7 @@ export function PageHeader({ title, description, action, children }: PageHeaderP
       {children}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1>{title}</h1>
+          <h1 className="!text-[length:var(--text-h2-size)] text-balance">{title}</h1>
           {description && (
             <p className="mt-1 text-sm text-muted-foreground">{description}</p>
           )}
