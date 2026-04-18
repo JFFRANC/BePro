@@ -5,6 +5,7 @@ export interface Bindings {
   ENVIRONMENT: string;
   DATABASE_URL: string;
   JWT_ACCESS_SECRET: string;
+  FILES: R2Bucket;
 }
 
 export interface Variables {
