@@ -15,6 +15,8 @@ import { PreviewPage } from "@/modules/design-system/pages/PreviewPage";
 import { UsersPage } from "@/modules/users/pages/UsersPage";
 import { UserDetailPage } from "@/modules/users/pages/UserDetailPage";
 import { ForcePasswordChangePage } from "@/modules/users/pages/ForcePasswordChangePage";
+import { ClientsPage } from "@/modules/clients/pages/ClientsPage";
+import { ClientDetailPage } from "@/modules/clients/pages/ClientDetailPage";
 import { useLocation } from "react-router-dom";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -102,10 +104,26 @@ export function App() {
                   }
                 />
                 <Route
+                  path="/clients/:id"
+                  element={
+                    <RequireAuth>
+                      <ClientDetailPage />
+                    </RequireAuth>
+                  }
+                />
+                <Route
                   path="/users"
                   element={
                     <RequireAuth>
                       <UsersPage />
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/clients"
+                  element={
+                    <RequireAuth>
+                      <ClientsPage />
                     </RequireAuth>
                   }
                 />
