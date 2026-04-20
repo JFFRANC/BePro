@@ -54,7 +54,8 @@ ADMIN_GENERAL/
 # Claude/Playwright temp files
 .playwright-mcp/
 .superpowers/
-.claude/
+.claude/*
+!.claude/commands/
 
 # Screenshots (temp)
 *.png

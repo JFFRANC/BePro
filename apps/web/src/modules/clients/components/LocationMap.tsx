@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import Map, { Marker, NavigationControl } from "react-map-gl/maplibre";
+import Map, { Marker, NavigationControl, type MapRef } from "react-map-gl/maplibre";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDebouncedValue } from "@/lib/use-debounce";
@@ -76,7 +76,7 @@ export function LocationMap({
   const [resolving, setResolving] = useState(false);
   const debouncedQuery = useDebouncedValue(searchQuery, 500);
   const suggestionsRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<any>(null);
+  const mapRef = useRef<MapRef | null>(null);
 
   const centerLat = latitude ?? MEXICO_CENTER.latitude;
   const centerLng = longitude ?? MEXICO_CENTER.longitude;

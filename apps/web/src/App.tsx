@@ -11,6 +11,7 @@ import { LoginPage } from "@/modules/auth/pages/LoginPage";
 import { useAuth } from "@/modules/auth/hooks/useAuth";
 import { AbilityProvider } from "@/components/ability-provider";
 import { defineAbilityFor } from "@/lib/ability";
+import { AppShellLayout } from "@/components/layout";
 import { PreviewPage } from "@/modules/design-system/pages/PreviewPage";
 import { UsersPage } from "@/modules/users/pages/UsersPage";
 import { UserDetailPage } from "@/modules/users/pages/UserDetailPage";
@@ -81,63 +82,36 @@ export function App() {
           <BrowserRouter>
             <QueryErrorResetBoundary>
               {({ reset }) => (
-            <ErrorBoundary onReset={reset}>
-              <OfflineBanner />
-              <Routes>
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/design-system" element={<PreviewPage />} />
-                <Route
-                  path="/change-password"
-                  element={
-                    <RequireAuth>
-                      <ForcePasswordChangePage />
-                    </RequireAuth>
-                  }
-                />
-                <Route path="/403" element={<ErrorPage code={403} />} />
-                <Route
-                  path="/"
-                  element={
-                    <RequireAuth>
-                      <DashboardPage />
-                    </RequireAuth>
-                  }
-                />
-                <Route
-                  path="/clients/:id"
-                  element={
-                    <RequireAuth>
-                      <ClientDetailPage />
-                    </RequireAuth>
-                  }
-                />
-                <Route
-                  path="/users"
-                  element={
-                    <RequireAuth>
-                      <UsersPage />
-                    </RequireAuth>
-                  }
-                />
-                <Route
-                  path="/clients"
-                  element={
-                    <RequireAuth>
-                      <ClientsPage />
-                    </RequireAuth>
-                  }
-                />
-                <Route
-                  path="/users/:id"
-                  element={
-                    <RequireAuth>
-                      <UserDetailPage />
-                    </RequireAuth>
-                  }
-                />
-                <Route path="*" element={<ErrorPage code={404} />} />
-              </Routes>
-            </ErrorBoundary>
+                <ErrorBoundary onReset={reset}>
+                  <OfflineBanner />
+                  <Routes>
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/design-system" element={<PreviewPage />} />
+                    <Route
+                      path="/change-password"
+                      element={
+                        <RequireAuth>
+                          <ForcePasswordChangePage />
+                        </RequireAuth>
+                      }
+                    />
+                    <Route path="/403" element={<ErrorPage code={403} />} />
+                    <Route
+                      element={
+                        <RequireAuth>
+                          <AppShellLayout />
+                        </RequireAuth>
+                      }
+                    >
+                      <Route path="/" element={<DashboardPage />} />
+                      <Route path="/users" element={<UsersPage />} />
+                      <Route path="/users/:id" element={<UserDetailPage />} />
+                      <Route path="/clients" element={<ClientsPage />} />
+                      <Route path="/clients/:id" element={<ClientDetailPage />} />
+                    </Route>
+                    <Route path="*" element={<ErrorPage code={404} />} />
+                  </Routes>
+                </ErrorBoundary>
               )}
             </QueryErrorResetBoundary>
           </BrowserRouter>
