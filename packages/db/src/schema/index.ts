@@ -2,3 +2,8 @@ export { tenants } from "./tenants.js";
 export { users } from "./users.js";
 export { refreshTokens } from "./refresh-tokens.js";
 export { auditEvents } from "./audit-events.js";
+export { clients } from "./clients.js";
+export { clientAssignments } from "./client-assignments.js";
+export { clientContacts } from "./client-contacts.js";
+export { clientPositions } from "./client-positions.js";
+export { clientDocuments } from "./client-documents.js";

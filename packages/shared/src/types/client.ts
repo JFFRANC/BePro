@@ -12,10 +12,21 @@ export interface IClientFormConfig {
 export interface IClientDto {
   id: string;
   name: string;
-  contactInfo?: string;
+  email?: string;
+  phone?: string;
   address?: string;
+  latitude?: number;
+  longitude?: number;
   isActive: boolean;
   formConfig: IClientFormConfig;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IClientDetailDto extends IClientDto {
+  contacts: IClientContactDto[];
+  positions: IClientPositionDto[];
+  assignments: IClientAssignmentDto[];
 }
 
 export interface IClientAssignmentDto {
@@ -29,17 +40,66 @@ export interface IClientAssignmentDto {
   accountExecutiveFullName?: string;
 }
 
+export interface IClientContactDto {
+  id: string;
+  clientId: string;
+  name: string;
+  phone: string;
+  email: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IClientPositionDto {
+  id: string;
+  clientId: string;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IClientDocumentDto {
+  id: string;
+  clientId: string;
+  originalName: string;
+  documentType: "quotation" | "interview_pass" | "position_description";
+  mimeType: string;
+  sizeBytes: number;
+  uploadedBy: string;
+  uploaderName: string;
+  createdAt: string;
+}
+
+export interface IClientListResponse {
+  data: IClientDto[];
+  pagination: IClientPaginationMeta;
+}
+
+export interface IClientPaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
 export interface ICreateClientRequest {
   name: string;
-  contactInfo?: string;
+  email?: string;
+  phone?: string;
   address?: string;
+  latitude?: number;
+  longitude?: number;
   formConfig?: IClientFormConfig;
 }
 
 export interface IUpdateClientRequest {
   name?: string;
-  contactInfo?: string;
+  email?: string;
+  phone?: string;
   address?: string;
+  latitude?: number;
+  longitude?: number;
   isActive?: boolean;
   formConfig?: IClientFormConfig;
 }
@@ -47,4 +107,24 @@ export interface IUpdateClientRequest {
 export interface IAssignUserRequest {
   userId: string;
   accountExecutiveId?: string;
+}
+
+export interface ICreateContactRequest {
+  name: string;
+  phone: string;
+  email: string;
+}
+
+export interface IUpdateContactRequest {
+  name?: string;
+  phone?: string;
+  email?: string;
+}
+
+export interface ICreatePositionRequest {
+  name: string;
+}
+
+export interface IUpdatePositionRequest {
+  name?: string;
 }

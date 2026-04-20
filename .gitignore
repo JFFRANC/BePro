@@ -59,3 +59,7 @@ ADMIN_GENERAL/
 
 # Screenshots (temp)
 *.png
+
+# .NET build artifacts
+src/backend/**/bin/
+src/backend/**/obj/

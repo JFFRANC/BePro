@@ -10,7 +10,7 @@
   // Secrets (set in .dev.vars for local, `wrangler secret put` for production):
   // JWT_ACCESS_SECRET — HS256 signing secret for access JWTs
   // DATABASE_URL — Neon PostgreSQL connection string
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "bepro-files" }]
   // Future bindings:
-  // "r2_buckets": [{ "binding": "FILES", "bucket_name": "bepro-files" }]
   // "kv_namespaces": [{ "binding": "CACHE", "id": "..." }]
 }
