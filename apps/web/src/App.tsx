@@ -11,6 +11,7 @@ import { LoginPage } from "@/modules/auth/pages/LoginPage";
 import { useAuth } from "@/modules/auth/hooks/useAuth";
 import { AbilityProvider } from "@/components/ability-provider";
 import { defineAbilityFor } from "@/lib/ability";
+import { AppShellLayout } from "@/components/layout";
 import { PreviewPage } from "@/modules/design-system/pages/PreviewPage";
 import { UsersPage } from "@/modules/users/pages/UsersPage";
 import { UserDetailPage } from "@/modules/users/pages/UserDetailPage";
@@ -94,29 +95,16 @@ export function App() {
                 />
                 <Route path="/403" element={<ErrorPage code={403} />} />
                 <Route
-                  path="/"
                   element={
                     <RequireAuth>
-                      <DashboardPage />
+                      <AppShellLayout />
                     </RequireAuth>
                   }
-                />
-                <Route
-                  path="/users"
-                  element={
-                    <RequireAuth>
-                      <UsersPage />
-                    </RequireAuth>
-                  }
-                />
-                <Route
-                  path="/users/:id"
-                  element={
-                    <RequireAuth>
-                      <UserDetailPage />
-                    </RequireAuth>
-                  }
-                />
+                >
+                  <Route path="/" element={<DashboardPage />} />
+                  <Route path="/users" element={<UsersPage />} />
+                  <Route path="/users/:id" element={<UserDetailPage />} />
+                </Route>
                 <Route path="*" element={<ErrorPage code={404} />} />
               </Routes>
             </ErrorBoundary>
