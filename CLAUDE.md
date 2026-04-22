@@ -154,6 +154,8 @@ Per-domain CLAUDE.md files:
 - Neon PostgreSQL (serverless) with Row-Level Security via `drizzle-orm/neon-http` (004-users-module)
 - TypeScript 5.8.3 (strict mode) + React 19.1, Vite 6.3, react-router-dom 7.6, Tailwind CSS 4.1, shadcn/ui (already installed: sheet, breadcrumb, command, tooltip, avatar, dropdown-menu, scroll-area, separator, popover, skeleton, badge), lucide-react 0.577, Zustand 5.0, @casl/ability 6.8 + @casl/react 5.0, next-themes 0.4, cmdk 1.1, TanStack Query 5.91, clsx + tailwind-merge (005-app-shell-layout)
 - `window.localStorage` for sidebar collapsed state and theme preference (via `next-themes`). No backend storage introduced by this feature. (005-app-shell-layout)
+- TypeScript 5.8.3 (strict mode) + React 19.1, Vite 6.3, Tailwind CSS 4.1, shadcn/ui (dropdown-menu, button), `next-themes` 0.4.6, lucide-react 0.577 (Sun/Moon/Monitor icons), Zustand 5.0 (unchanged) (006-theme-toggle)
+- `window.localStorage` via `next-themes` built-in persistence under key `bepro.theme`. No backend storage. (006-theme-toggle)
 
 ## Recent Changes
 - 002-jwt-auth-module: JWT auth with opaque refresh tokens (httpOnly cookie), tenant resolution via slug, per-account brute-force lockout, role-based middleware, RLS tenant isolation

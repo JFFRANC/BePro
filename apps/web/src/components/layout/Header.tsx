@@ -1,4 +1,5 @@
 import { TenantBadge } from "./TenantBadge";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function Header() {
   return (
@@ -16,7 +17,8 @@ export function Header() {
         data-slot="header-right"
         className="flex items-center justify-end gap-2"
       >
-        {/* Reservado para Phase 7 (ThemeToggle) y Phase 9 (NotificationsBell, UserMenu) */}
+        <ThemeToggle />
+        {/* Reservado para Phase 9: NotificationsBell, UserMenu */}
       </div>
     </header>
   );

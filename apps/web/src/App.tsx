@@ -1,5 +1,6 @@
 import { QueryClientProvider, QueryErrorResetBoundary } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { queryClient } from "@/lib/query-client";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -76,6 +77,12 @@ function DashboardPage() {
 
 export function App() {
   return (
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      storageKey="bepro.theme"
+    >
     <ThemeProvider theme={null}>
       <QueryClientProvider client={queryClient}>
         <ConfirmDialogProvider>
@@ -119,5 +126,6 @@ export function App() {
         </ConfirmDialogProvider>
       </QueryClientProvider>
     </ThemeProvider>
+    </NextThemesProvider>
   );
 }

@@ -428,3 +428,25 @@
     padding-inline: 2rem;
   }
 }
+
+/*
+ * Palette transition on light/dark swap (feature 006-theme-toggle).
+ * Gated by @media (prefers-reduced-motion: no-preference) so users who opt
+ * out of motion see an instantaneous swap. Only color tokens are animated —
+ * never layout/transform — to avoid unintended motion.
+ * FR-016: duration ≤ 200ms.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  html,
+  body,
+  *,
+  *::before,
+  *::after {
+    transition:
+      background-color 150ms ease,
+      color 150ms ease,
+      border-color 150ms ease,
+      fill 150ms ease,
+      stroke 150ms ease;
+  }
+}
