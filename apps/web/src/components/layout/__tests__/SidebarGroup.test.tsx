@@ -68,7 +68,10 @@ describe("SidebarGroup", () => {
         collapsed={false}
       />,
     );
-    expect(container.firstChild).toBeNull();
+    // SidebarGroup returns null when empty; no nav link, label, or list is emitted.
+    expect(container.querySelectorAll("a").length).toBe(0);
+    expect(container.querySelector("ul")).toBeNull();
+    expect(screen.queryByText("Principal")).toBeNull();
   });
 
   it("omits the label when group has no label (dev group)", () => {

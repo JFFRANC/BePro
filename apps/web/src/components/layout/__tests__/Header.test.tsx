@@ -76,4 +76,13 @@ describe("Header", () => {
     const { container } = renderWithRouter(<Header />);
     expect(container.querySelector("header")).not.toBeNull();
   });
+
+  it("mounts the ThemeToggle inside the header right cluster (FR-001)", () => {
+    const { container } = renderWithRouter(<Header />);
+    const right = container.querySelector("[data-slot='header-right']");
+    expect(right).not.toBeNull();
+    expect(
+      right!.querySelector("[data-slot='theme-toggle-trigger']"),
+    ).not.toBeNull();
+  });
 });
