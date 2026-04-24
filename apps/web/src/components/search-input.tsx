@@ -17,7 +17,10 @@ export function SearchInput({
 }: SearchInputProps) {
   return (
     <div className={cn("relative", className)}>
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+      <Search
+        className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none transition-colors duration-150"
+        aria-hidden="true"
+      />
       <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -27,11 +30,18 @@ export function SearchInput({
       {value && (
         <button
           type="button"
-          aria-label="Limpiar búsqueda"
+          aria-label="Limpiar busqueda"
           onClick={() => onChange("")}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+          className={cn(
+            "absolute right-2 top-1/2 -translate-y-1/2",
+            "flex size-6 items-center justify-center rounded-md",
+            "text-muted-foreground hover:text-foreground hover:bg-muted",
+            "transition-colors duration-150 ease-out",
+            "animate-in fade-in-0 zoom-in-90 duration-150",
+            "motion-reduce:zoom-in-100",
+          )}
         >
-          <X className="h-4 w-4" aria-hidden="true" />
+          <X className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
       )}
     </div>
