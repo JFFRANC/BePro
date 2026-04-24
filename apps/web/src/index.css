@@ -348,6 +348,17 @@
   }
 }
 
+/* Feature 009: shimmer animation para skeletons (barrido de luz).
+   Respeta prefers-reduced-motion al desactivar via motion-reduce: utility. */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
