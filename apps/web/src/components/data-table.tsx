@@ -47,30 +47,44 @@ export function DataTable<TData, TValue>({
     },
   });
 
+  // Feature 009: stagger de filas en mount. Primeras 10 filas en cascada (40ms
+   // cada una); a partir de la 11 sin delay (aparicion simultanea al final del
+   // stagger). motion-reduce:animate-none cancela todo.
+  const rows = table.getRowModel().rows;
+
   return (
     <div>
-      <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.length > 0 ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+      {/* Table ya trae rounded-xl border shadow-sm desde components/ui/table.tsx */}
+      <Table>
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => (
+                <TableHead key={header.id}>
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )}
+                </TableHead>
+              ))}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {rows.length > 0 ? (
+            rows.map((row, index) => {
+              const delayMs = index < 10 ? index * 40 : 400;
+              return (
+                <TableRow
+                  key={row.id}
+                  className="animate-in fade-in-0 slide-in-from-top-1 duration-[180ms] ease-out motion-reduce:animate-none motion-reduce:slide-in-from-top-0"
+                  style={{
+                    animationDelay: `${delayMs}ms`,
+                    animationFillMode: "both",
+                  }}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(
@@ -80,29 +94,29 @@ export function DataTable<TData, TValue>({
                     </TableCell>
                   ))}
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  No hay resultados.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              );
+            })
+          ) : (
+            <TableRow>
+              <TableCell
+                colSpan={columns.length}
+                className="h-24 text-center text-muted-foreground"
+              >
+                No hay resultados.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
 
-      <div className="flex items-center justify-between px-2 py-4">
-        <p className="text-sm text-muted-foreground">
-          {table.getFilteredRowModel().rows.length} rows
+      <div className="mt-4 flex items-center justify-between gap-3 px-1">
+        <p className="text-sm text-muted-foreground tabular-nums">
+          {table.getFilteredRowModel().rows.length} registros
         </p>
-        <div className="flex items-center gap-2">
-          <p className="text-sm text-muted-foreground">
-            Page {table.getState().pagination.pageIndex + 1} of{" "}
-            {table.getPageCount()}
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-muted-foreground tabular-nums">
+            Pagina {table.getState().pagination.pageIndex + 1} de{" "}
+            {table.getPageCount() || 1}
           </p>
           <Button
             variant="outline"
@@ -110,7 +124,7 @@ export function DataTable<TData, TValue>({
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
-            Previous
+            Anterior
           </Button>
           <Button
             variant="outline"
@@ -118,7 +132,7 @@ export function DataTable<TData, TValue>({
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
-            Next
+            Siguiente
           </Button>
         </div>
       </div>
