@@ -4,6 +4,7 @@ import type { HonoEnv } from "./types.js";
 import authRoutes from "./modules/auth/routes.js";
 import { usersRoutes } from "./modules/users/routes.js";
 import { clientsRoutes } from "./modules/clients/routes.js";
+import { candidatesRoutes } from "./modules/candidates/routes.js";
 
 const app = new Hono<HonoEnv>();
 
@@ -142,5 +143,6 @@ app.get("/api/utils/resolve-map-url", async (c) => {
 app.route("/api/auth", authRoutes);
 app.route("/api/users", usersRoutes);
 app.route("/api/clients", clientsRoutes);
+app.route("/api/candidates", candidatesRoutes);
 
 export default app;

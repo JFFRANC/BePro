@@ -106,7 +106,7 @@ GitHub Spec Kit governs the development workflow. Specifications are the source 
 | CSD certificates (future) | Encrypted at rest in R2 |
 | Data residency | Neon US-East (legal under LFPDPPP with adequate protections) |
 | Audit trail | Append-only `AuditEvent` table captures who/what/when/old/new for every state change |
-| Unique constraints | `(tenant_id, email)` on User; `(tenant_id, phone, client_id)` on Candidate for duplicate detection |
+| Unique constraints | `(tenant_id, email)` on User. Candidate duplicate detection uses a **non-unique** lookup index on `(tenant_id, phone_normalized, client_id) WHERE is_active` — duplicates raise a confirmable warning (spec 007 FR-014/FR-015), so a DB-level UNIQUE would block the legitimate flow and is intentionally NOT applied. |
 
 ## Development Workflow & Quality Gates
 
@@ -160,4 +160,8 @@ This constitution supersedes all other development practices and guidelines for 
 - If a specialized skill/agent contradicts a constitution principle, the constitution wins
 - Unresolved conflicts are escalated to both developers for a governance decision
 
-**Version**: 1.0.0 | **Ratified**: 2026-03-27 | **Last Amended**: 2026-03-27
+**Version**: 1.0.1 | **Ratified**: 2026-03-27 | **Last Amended**: 2026-04-21
+
+**Changelog**
+
+- **1.0.1 (2026-04-21)**: PATCH — Clarified "Unique constraints" row in Security & Compliance: candidate duplicate detection uses a non-unique lookup index, not a UNIQUE constraint, because FR-014/FR-015 require a confirmable warning (not a hard block). No principle was added or removed.
