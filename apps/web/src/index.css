@@ -354,9 +354,28 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Feature 009: antialiasing + optical alignment para fuentes modernas */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
   html {
     @apply font-sans;
+  }
+
+  /* Feature 009: iconos mas elegantes.
+     lucide-react emite <svg stroke-width="2"> por defecto. Bajamos a 1.75
+     para que las lineas se sientan mas finas y premium sin perder
+     legibilidad. Solo afecta a lucide (identificado por la clase .lucide
+     que el paquete siempre aplica). */
+  svg.lucide {
+    stroke-width: 1.75;
+    vector-effect: non-scaling-stroke;
+  }
+  /* Pero en botones grandes y chips el 1.75 se ve muy fino: subimos a 2 */
+  [data-slot="button"] svg.lucide,
+  [data-slot="badge"] svg.lucide {
+    stroke-width: 2;
   }
 
   /* Heading typography */
