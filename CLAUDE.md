@@ -156,6 +156,8 @@ Per-domain CLAUDE.md files:
 - `window.localStorage` for sidebar collapsed state and theme preference (via `next-themes`). No backend storage introduced by this feature. (005-app-shell-layout)
 - TypeScript 5.8.3 (strict mode) + React 19.1, Vite 6.3, Tailwind CSS 4.1, shadcn/ui (dropdown-menu, button), `next-themes` 0.4.6, lucide-react 0.577 (Sun/Moon/Monitor icons), Zustand 5.0 (unchanged) (006-theme-toggle)
 - `window.localStorage` via `next-themes` built-in persistence under key `bepro.theme`. No backend storage. (006-theme-toggle)
+- TypeScript 5.8.3 (strict mode) + React 19.1, Vite 6.3, Tailwind CSS 4.1.10 (`@theme inline` tokens), shadcn/ui (all components already installed), `tw-animate-css` (already installed, used for enter/exit animations), `next-themes` 0.4.6 (theme mode manager from feature 006), `class-variance-authority` 0.7.1, `clsx` 2.1, `tailwind-merge` 3.5, `lucide-react` 0.577, `sonner` 2.0 (009-ui-visual-refresh)
+- N/A (presentational only). Theme mode persistence remains owned by feature 006. (009-ui-visual-refresh)
 
 ## Recent Changes
 - 002-jwt-auth-module: JWT auth with opaque refresh tokens (httpOnly cookie), tenant resolution via slug, per-account brute-force lockout, role-based middleware, RLS tenant isolation
