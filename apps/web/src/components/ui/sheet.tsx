@@ -27,8 +27,10 @@ function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
   return (
     <SheetPrimitive.Backdrop
       data-slot="sheet-overlay"
+      // Feature 009: scrim solido + backdrop-blur-sm para aislar el sheet
       className={cn(
-        "fixed inset-0 z-50 bg-black/10 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-xs",
+        "fixed inset-0 z-50 bg-foreground/20 dark:bg-black/60 transition-opacity duration-200 ease-out supports-backdrop-filter:backdrop-blur-sm",
+        "data-ending-style:opacity-0 data-starting-style:opacity-0 motion-reduce:duration-100",
         className
       )}
       {...props}

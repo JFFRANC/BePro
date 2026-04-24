@@ -30,8 +30,13 @@ function DialogOverlay({
   return (
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
+      // Feature 009: scrim mas solido para aislar foreground + blur mas
+      // notorio. Enter 200ms ease-out, exit 150ms ease-in.
       className={cn(
-        "fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 isolate z-50 bg-foreground/20 dark:bg-black/60 ease-out supports-backdrop-filter:backdrop-blur-sm",
+        "data-open:animate-in data-open:fade-in-0 data-open:duration-200",
+        "data-closed:animate-out data-closed:fade-out-0 data-closed:duration-150 data-closed:ease-in",
+        "motion-reduce:duration-100",
         className
       )}
       {...props}
@@ -52,8 +57,13 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
+        // Feature 009: superficie elevada real (shadow-2xl + border), entrada
+        // mas expresiva (fade + zoom + slight slide-up), cierre mas rapido.
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-5 text-sm text-popover-foreground border border-border shadow-2xl outline-none sm:max-w-md",
+          "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-open:slide-in-from-bottom-2 data-open:duration-200 data-open:ease-out",
+          "data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 data-closed:duration-150 data-closed:ease-in",
+          "motion-reduce:slide-in-from-bottom-0 motion-reduce:zoom-in-100 motion-reduce:data-closed:zoom-out-100",
           className
         )}
         {...props}
