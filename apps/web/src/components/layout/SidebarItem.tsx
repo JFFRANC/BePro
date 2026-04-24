@@ -34,10 +34,15 @@ export function SidebarItem({
       title={collapsed ? item.label : undefined}
       onClick={handleClick}
       className={cn(
-        "group flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors",
+        "group relative flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors duration-150 ease-out",
         "hover:bg-muted hover:text-foreground",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        "data-[active=true]:bg-muted data-[active=true]:text-foreground data-[active=true]:font-medium",
+        "data-[active=true]:bg-accent data-[active=true]:text-accent-foreground data-[active=true]:font-medium",
+        // Active-indicator slide (T099): barra vertical primary en el borde izquierdo,
+        // crece de 0 a 1.5rem cuando el item es activo (200ms ease-out).
+        "before:pointer-events-none before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-0.5 before:h-0 before:rounded-r-full before:bg-primary before:transition-[height] before:duration-200 before:ease-out",
+        "data-[active=true]:before:h-6",
+        "motion-reduce:before:transition-none motion-reduce:transition-none",
         collapsed && "justify-center px-2",
       )}
     >

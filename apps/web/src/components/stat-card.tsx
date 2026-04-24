@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { TrendingUp } from "lucide-react";
 import {
   Card,
@@ -20,6 +21,58 @@ interface StatCardProps {
   showTrendIcon?: boolean;
 }
 
+// Hook: anima un numero desde su valor previo al nuevo con easing ease-out
+// durante 600ms. Respeta prefers-reduced-motion saltando al valor final.
+function useCountUp(target: number | string): number | string {
+  const [display, setDisplay] = useState<number | string>(target);
+  const prevRef = useRef<number | string>(target);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const prev = prevRef.current;
+    prevRef.current = target;
+
+    if (typeof target !== "number" || typeof prev !== "number") {
+      setDisplay(target);
+      return;
+    }
+
+    const reduce =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) {
+      setDisplay(target);
+      return;
+    }
+
+    if (prev === target) {
+      return;
+    }
+
+    const start = performance.now();
+    const duration = 600;
+    const from = prev;
+    const delta = target - from;
+
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      const current = from + delta * eased;
+      setDisplay(Number.isInteger(target) ? Math.round(current) : Number(current.toFixed(2)));
+      if (t < 1) {
+        rafRef.current = requestAnimationFrame(tick);
+      }
+    };
+    rafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, [target]);
+
+  return display;
+}
+
 export function StatCard({
   label,
   value,
@@ -31,6 +84,7 @@ export function StatCard({
   iconBg,
   showTrendIcon,
 }: StatCardProps) {
+  const displayValue = useCountUp(value);
   return (
     <Card
       className={cn(
@@ -51,9 +105,9 @@ export function StatCard({
           </div>
         </div>
         <CardTitle
-          className={cn("!text-4xl font-bold font-heading", valueColor)}
+          className={cn("!text-4xl font-bold font-heading tabular-nums", valueColor)}
         >
-          {value}
+          {displayValue}
         </CardTitle>
       </CardHeader>
       {trend && (
