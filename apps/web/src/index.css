@@ -191,8 +191,8 @@
   /* Radius */
   --radius: 0.5rem;
 
-  /* Typography */
-  --font-heading: 'Fraunces', serif;
+  /* Typography (feature 009: modern sans for headings) */
+  --font-heading: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-sans: 'Source Sans 3', 'Source Sans Pro', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
 

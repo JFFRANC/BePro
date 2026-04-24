@@ -12,7 +12,17 @@ function Card({
       data-slot="card"
       data-size={size}
       className={cn(
-        "group/card flex flex-col gap-4 overflow-hidden rounded-xl bg-card py-4 text-sm text-card-foreground ring-1 ring-foreground/10 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
+        // Feature 009: sombra real + borde token-driven (reemplaza ring plano).
+        // Motion: transicion discreta de sombra. El lift en hover lo opt-in el
+        // consumidor via `data-interactive` -> `data-[interactive]:hover:*`.
+        "group/card flex flex-col gap-4 overflow-hidden rounded-xl bg-card py-4 text-sm text-card-foreground",
+        "border border-border shadow-sm",
+        "transition-[transform,box-shadow] duration-200 ease-out",
+        "data-[interactive=true]:hover:-translate-y-0.5 data-[interactive=true]:hover:shadow-lg data-[interactive=true]:cursor-pointer",
+        "motion-reduce:transform-none motion-reduce:transition-[box-shadow]",
+        "has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0",
+        "data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0",
+        "*:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
         className
       )}
       {...props}

@@ -163,12 +163,15 @@ describe("US1 — Brand Identity & Color Tokens", () => {
 });
 
 describe("US2 — Typography System", () => {
-  it("T019: --font-heading contains Fraunces and --font-sans contains Source Sans 3", () => {
+  it("T019: --font-heading is a modern sans (feature 009) and --font-sans contains Source Sans 3", () => {
+    // Feature 003 pinned --font-heading a 'Fraunces' (serif). Feature 009
+    // intencionalmente cambia la identidad tipografica a un sans moderno
+    // ('Plus Jakarta Sans'). Este test valida la nueva verdad del producto.
     const rootBlock = rawCss.match(/:root\s*\{([^}]+)\}/s)![1];
 
     const headingMatch = rootBlock.match(/--font-heading:\s*([^;]+);/);
     expect(headingMatch).not.toBeNull();
-    expect(headingMatch![1]).toContain("Fraunces");
+    expect(headingMatch![1]).toContain("Plus Jakarta Sans");
 
     const sansMatch = rootBlock.match(/--font-sans:\s*([^;]+);/);
     expect(sansMatch).not.toBeNull();
