@@ -79,11 +79,12 @@ function extractPlan(raw: unknown): PlanEnvelope {
   let queryPlan = first["QUERY PLAN"];
   // Si es string, intentar JSON.parse.
   if (typeof queryPlan === "string") {
+    const queryPlanStr = queryPlan;
     try {
-      queryPlan = JSON.parse(queryPlan);
+      queryPlan = JSON.parse(queryPlanStr);
     } catch {
       throw new Error(
-        `extractPlan: "QUERY PLAN" es string no parseable: ${queryPlan.slice(0, 200)}`,
+        `extractPlan: "QUERY PLAN" es string no parseable: ${queryPlanStr.slice(0, 200)}`,
       );
     }
   }
