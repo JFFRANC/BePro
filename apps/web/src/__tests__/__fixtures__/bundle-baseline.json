@@ -1,0 +1,13 @@
+{
+  "capturedAt": "2026-04-23",
+  "commit": "b0d58f0",
+  "note": "Baseline from T002 (feature 009-ui-visual-refresh). Sizes are gzipped as reported by `vite build`. Guardrail: total gzipped size MUST be <= baseline * 1.05 (SC-005).",
+  "assets": {
+    "index.html": { "gzippedBytes": 760 },
+    "index.css": { "gzippedBytes": 29880 },
+    "index.js": { "gzippedBytes": 372540 },
+    "maplibre-gl.js": { "gzippedBytes": 291112 }
+  },
+  "totalGzippedBytes": 694292,
+  "maxAllowedGzippedBytes": 729006
+}
