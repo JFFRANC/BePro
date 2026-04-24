@@ -19,6 +19,10 @@ import { UserDetailPage } from "@/modules/users/pages/UserDetailPage";
 import { ForcePasswordChangePage } from "@/modules/users/pages/ForcePasswordChangePage";
 import { ClientsPage } from "@/modules/clients/pages/ClientsPage";
 import { ClientDetailPage } from "@/modules/clients/pages/ClientDetailPage";
+import { NewCandidatePage } from "@/modules/candidates/pages/NewCandidatePage";
+import { CandidateListPage } from "@/modules/candidates/pages/CandidateListPage";
+import { CandidateDetailPage } from "@/modules/candidates/pages/CandidateDetailPage";
+import { CategoryAdminPage } from "@/modules/candidates/pages/CategoryAdminPage";
 import { useLocation } from "react-router-dom";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -115,6 +119,10 @@ export function App() {
                       <Route path="/users/:id" element={<UserDetailPage />} />
                       <Route path="/clients" element={<ClientsPage />} />
                       <Route path="/clients/:id" element={<ClientDetailPage />} />
+                      <Route path="/candidates" element={<CandidateListPage />} />
+                      <Route path="/candidates/new" element={<NewCandidatePage />} />
+                      <Route path="/candidates/:id" element={<CandidateDetailPage />} />
+                      <Route path="/settings/candidate-categories" element={<CategoryAdminPage />} />
                     </Route>
                     <Route path="*" element={<ErrorPage code={404} />} />
                   </Routes>

@@ -21,7 +21,11 @@
     "db:push": "export $(cat ../../apps/api/.dev.vars | xargs) && drizzle-kit push",
     "db:studio": "export $(cat ../../apps/api/.dev.vars | xargs) && drizzle-kit studio",
     "db:seed": "export $(cat ../../apps/api/.dev.vars | xargs) && tsx scripts/seed.ts",
+    "seed:candidates-10k": "export $(cat ../../apps/api/.dev.vars | xargs) && tsx scripts/seed-10k-candidates.ts",
     "db:apply-rls": "export $(cat ../../apps/api/.dev.vars | xargs) && tsx scripts/apply-rls.ts",
+    "db:exec": "export $(cat ../../apps/api/.dev.vars | xargs) && tsx scripts/db-exec.ts",
+    "db:query": "export $(cat ../../apps/api/.dev.vars | xargs) && tsx scripts/db-query.ts",
+    "db:create-app-worker": "export $(cat ../../apps/api/.dev.vars | xargs) && tsx scripts/create-app-worker.ts",
     "db:setup": "pnpm db:push && pnpm db:apply-rls && pnpm db:seed",
     "db:reset": "pnpm db:push -- --force && pnpm db:apply-rls && pnpm db:seed"
   },

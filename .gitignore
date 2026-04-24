@@ -12,6 +12,7 @@ build/
 # Cloudflare
 .wrangler/
 .dev.vars
+.dev.vars.*
 
 # Vite
 .vite/
@@ -40,6 +41,9 @@ npm-debug.log*
 
 # Test
 coverage/
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/.playwright/
 
 # Drizzle
 drizzle/meta/

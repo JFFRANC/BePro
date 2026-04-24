@@ -59,5 +59,18 @@ app.post("/login", zValidator("json", loginSchema), (c) => { ... });
 ## Commands
 - `pnpm dev` — Start Wrangler dev server (port 8787)
 - `pnpm deploy` — Deploy to Cloudflare Workers
-- `pnpm test` — Run Vitest
+- `pnpm test` — Run Vitest (unit + mocked integration)
+- `pnpm test:integration` — Run real-Neon integration tests (requires `DATABASE_URL_WORKER` in `.dev.vars`, see `vitest.integration.config.ts`)
 - `pnpm typecheck` — Type check
+
+## Implemented Modules
+
+| Module | Path | Summary |
+|---|---|---|
+| `auth` | `src/modules/auth/` | JWT login, refresh token rotation, role middleware, `SET LOCAL app.tenant_id` on every request |
+| `tenants` | embedded in `auth` / `users` | Tenant provisioning + slug lookup (pre-login, RLS-exempt table) |
+| `users` | `src/modules/users/` | User CRUD within tenant, role assignment, CSV import, password management |
+| `clients` | `src/modules/clients/` | Client CRUD, contacts, positions, documents, AE assignments, per-client `form_config` |
+| `candidates` | `src/modules/candidates/` | Registration with duplicate warning + privacy acknowledgement, 14-state FSM with role gating, R2 attachments (server-proxied upload, see ADR-002), admin reactivation (FR-038a), rejection/decline categories, retention-review compliance surface (FR-003a), append-only audit writes |
+
+Future modules (per roadmap): `placements`, `audit` (dedicated query/projection surface on top of existing `audit_events`).
