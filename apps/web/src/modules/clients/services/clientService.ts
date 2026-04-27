@@ -70,6 +70,90 @@ export async function deleteAssignment(clientId: string, assignmentId: string): 
   await apiClient.delete(`/clients/${clientId}/assignments/${assignmentId}`);
 }
 
+// 008 expansion — atomic batch set of client assignments (AE + recruiter).
+export interface IBatchAssignmentsRequest {
+  accountExecutives: string[];
+  recruiters: { userId: string; accountExecutiveId?: string }[];
+}
+
+export interface IBatchAssignmentsResponse {
+  clientId: string;
+  added: {
+    userId: string;
+    role: "account_executive" | "recruiter";
+    at: string;
+  }[];
+  removed: {
+    userId: string;
+    reason: "explicit" | "cascade";
+    at: string;
+  }[];
+  reparented: {
+    userId: string;
+    from: string | null;
+    to: string | null;
+    at: string;
+  }[];
+  unchanged: string[];
+}
+
+export async function batchAssignClient(
+  clientId: string,
+  payload: IBatchAssignmentsRequest,
+): Promise<IBatchAssignmentsResponse> {
+  const response = await apiClient.post<IBatchAssignmentsResponse>(
+    `/clients/${clientId}/assignments/batch`,
+    payload,
+  );
+  return response.data;
+}
+
+// 008-ux-roles-refinements / US6 — custom formConfig fields CRUD.
+export interface ICustomFormField {
+  key: string;
+  label: string;
+  type: "text" | "number" | "date" | "checkbox" | "select";
+  required: boolean;
+  options: string[] | null;
+  archived: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function createFormConfigField(
+  clientId: string,
+  input: {
+    key: string;
+    label: string;
+    type: ICustomFormField["type"];
+    required?: boolean;
+    options?: string[] | null;
+  },
+): Promise<ICustomFormField> {
+  const res = await apiClient.post<{ clientId: string; field: ICustomFormField }>(
+    `/clients/${clientId}/form-config/fields`,
+    input,
+  );
+  return res.data.field;
+}
+
+export async function patchFormConfigField(
+  clientId: string,
+  key: string,
+  input: {
+    label?: string;
+    required?: boolean;
+    options?: string[] | null;
+    archived?: boolean;
+  },
+): Promise<ICustomFormField> {
+  const res = await apiClient.patch<{ clientId: string; field: ICustomFormField }>(
+    `/clients/${clientId}/form-config/fields/${encodeURIComponent(key)}`,
+    input,
+  );
+  return res.data.field;
+}
+
 // -- Contacts --
 
 export async function createContact(

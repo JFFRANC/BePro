@@ -280,6 +280,66 @@ describe("POST /api/candidates (US1)", () => {
     );
     expect(res.status).toBe(401);
   });
+
+  // 008-ux-roles-refinements / US2 — recruiter-only candidate create gate.
+  it.each([
+    ["admin"],
+    ["manager"],
+    ["account_executive"],
+  ])("403 — %s no puede crear candidatos (FR-CG-001)", async (role) => {
+    const token = await createToken({ role });
+    const res = await app.request(
+      "/api/candidates",
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(validBody),
+      },
+      TEST_ENV,
+    );
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as { error: string; message: string };
+    expect(body.error).toBe("forbidden");
+    expect(body.message).toMatch(/solo reclutadores/i);
+  });
+
+  it("201 — recruiter freelancer también puede crear (FR-CG-001)", async () => {
+    vi.mocked(createCandidate).mockResolvedValue({ candidate: sampleCandidate as any });
+    const token = await createToken({ role: "recruiter", isFreelancer: true });
+    const res = await app.request(
+      "/api/candidates",
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(validBody),
+      },
+      TEST_ENV,
+    );
+    expect(res.status).toBe(201);
+  });
+
+  // 008-ux-roles-refinements / US7 — privacy_notice_id is optional.
+  it("201 — recruiter POST without privacy_notice_id (FR-RP-002)", async () => {
+    vi.mocked(createCandidate).mockResolvedValue({ candidate: sampleCandidate as any });
+    const token = await createToken();
+    const { privacy_notice_id: _omit, privacy_acknowledged: _omit2, ...bodyNoNotice } =
+      validBody;
+    void _omit;
+    void _omit2;
+
+    const res = await app.request(
+      "/api/candidates",
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(bodyNoNotice),
+      },
+      TEST_ENV,
+    );
+
+    expect(res.status).toBe(201);
+    expect(createCandidate).toHaveBeenCalledOnce();
+  });
 });
 
 describe("GET /api/candidates/duplicates (US1)", () => {

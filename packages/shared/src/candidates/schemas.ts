@@ -9,6 +9,10 @@ export const candidateStatusSchema = z.enum(
 );
 
 // POST /api/candidates — Registrar candidato (US1, contracts §1)
+// 008-ux-roles-refinements / US7 (FR-RP-002): privacy_notice_id + privacy_acknowledged
+// are now optional. Recruiter-driven flow does not surface them in the UI; the
+// constitution v1.0.2 §VI permits offline evidence collection. Legacy clients
+// that still send the pair continue to work (service validates when present).
 export const registerCandidateRequestSchema = z.object({
   client_id: uuidSchema,
   first_name: z.string().min(1).max(100),
@@ -18,10 +22,8 @@ export const registerCandidateRequestSchema = z.object({
   current_position: z.string().max(200).optional(),
   source: z.string().min(1).max(100),
   additional_fields: z.record(z.string(), z.unknown()).optional().default({}),
-  privacy_notice_id: uuidSchema,
-  privacy_acknowledged: z.literal(true, {
-    message: "Debes aceptar el aviso de privacidad",
-  }),
+  privacy_notice_id: uuidSchema.optional(),
+  privacy_acknowledged: z.literal(true).optional(),
   duplicate_confirmation: z
     .object({ confirmed_duplicate_ids: z.array(uuidSchema).min(1) })
     .optional(),
@@ -171,8 +173,10 @@ export interface ICandidateDetail extends ICandidateListItem {
   additional_fields: Record<string, unknown>;
   rejection_category_id?: string | null;
   decline_category_id?: string | null;
-  privacy_notice_id: string;
-  privacy_notice_acknowledged_at: string;
+  // 008-ux-roles-refinements / US7 — historical columns preserved read-only;
+  // new recruiter-driven registrations are null under LFPDPPP offline-evidence model.
+  privacy_notice_id?: string | null;
+  privacy_notice_acknowledged_at?: string | null;
   created_at: string;
 }
 

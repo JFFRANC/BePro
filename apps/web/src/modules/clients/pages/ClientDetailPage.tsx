@@ -3,7 +3,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useClient, useUpdateClient } from "../hooks/useClients";
 import { ClientForm } from "../components/ClientForm";
 import { FormConfigEditor } from "../components/FormConfigEditor";
-import { AssignmentManager } from "../components/AssignmentManager";
+import { FormConfigFieldsEditor } from "../components/FormConfigFieldsEditor";
+// 008-ux-roles-refinements / US5 — AssignmentTable replaces the old
+// AssignmentManager (single-select + "Asignar" button) with a searchable
+// checkbox table that saves the full diff in one batch call.
+import { AssignmentTable } from "../components/AssignmentTable";
 import { ContactDirectory } from "../components/ContactDirectory";
 import { PositionList } from "../components/PositionList";
 import { DocumentManager } from "../components/DocumentManager";
@@ -162,13 +166,15 @@ export function ClientDetailPage() {
 
         {isAdmin && (
           <TabsContent value="assignments" className="mt-4">
-            <AssignmentManager clientId={client.id} />
+            <AssignmentTable clientId={client.id} />
           </TabsContent>
         )}
 
         {isAdmin && (
-          <TabsContent value="config" className="mt-4">
+          <TabsContent value="config" className="mt-4 space-y-6">
             <FormConfigEditor client={client} />
+            {/* 008-ux-roles-refinements / US6 — admin-managed custom fields. */}
+            <FormConfigFieldsEditor client={client} />
           </TabsContent>
         )}
       </Tabs>

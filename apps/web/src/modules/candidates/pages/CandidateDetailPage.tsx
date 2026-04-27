@@ -137,16 +137,9 @@ export function CandidateDetailPage() {
                 value={c.registering_user.display_name}
               />
               <DataRow label="Activo" value={c.is_active ? "Sí" : "No"} />
-              <DataRow
-                label="Aviso de privacidad"
-                value={`v${data.privacy_notice?.version ?? "—"}${
-                  data.privacy_notice
-                    ? ` (${new Date(
-                        data.privacy_notice.effective_from,
-                      ).toLocaleDateString("es-MX")})`
-                    : ""
-                }`}
-              />
+              {/* 008-ux-roles-refinements / US7 — "Aviso de privacidad" row removed
+                  (FR-RP-005). Historical DB rows are preserved but not surfaced
+                  in the candidate detail UI. Evidentiary retrieval is DB/ops. */}
             </dl>
 
             {Object.keys(c.additional_fields ?? {}).length > 0 ? (

@@ -26,6 +26,86 @@ import { AlertCircle } from "lucide-react";
 
 export interface ClientFormConfigShape {
   fields?: FormFieldConfig[];
+  // 008-ux-roles-refinements — the 8 legacy toggles (FR-FC-005). When present
+  // and true, each renders as a corresponding additional field (see
+  // `legacyTogglesToFields`).
+  showAge?: boolean;
+  showPlant?: boolean;
+  showShift?: boolean;
+  showComments?: boolean;
+  showPosition?: boolean;
+  showMunicipality?: boolean;
+  showInterviewTime?: boolean;
+  showInterviewPoint?: boolean;
+}
+
+// 008-ux-roles-refinements / FR-FC-005 — map the 8 legacy toggles to
+// `FormFieldConfig` entries so `CandidateForm` can render + validate them
+// alongside the admin-managed `fields[]` from US6. Keeps existing clients
+// (e.g. Copreci with `showAge: true, showMunicipality: true, …`) working
+// without a data migration.
+const LEGACY_TOGGLE_FIELDS: Record<
+  keyof Omit<ClientFormConfigShape, "fields">,
+  FormFieldConfig
+> = {
+  showAge: { key: "age", label: "Edad", type: "number", required: false },
+  showPlant: { key: "plant", label: "Planta", type: "text", required: false },
+  showShift: { key: "shift", label: "Turno", type: "text", required: false },
+  showComments: {
+    key: "comments",
+    label: "Comentarios",
+    type: "text",
+    required: false,
+  },
+  showPosition: {
+    key: "position",
+    label: "Puesto",
+    type: "text",
+    required: false,
+  },
+  showMunicipality: {
+    key: "municipality",
+    label: "Municipio",
+    type: "text",
+    required: false,
+  },
+  showInterviewTime: {
+    key: "interview_time",
+    label: "Hora de entrevista",
+    type: "text",
+    required: false,
+  },
+  showInterviewPoint: {
+    key: "interview_point",
+    label: "Punto de entrevista",
+    type: "text",
+    required: false,
+  },
+};
+
+function legacyTogglesToFields(
+  config: ClientFormConfigShape | null | undefined,
+): FormFieldConfig[] {
+  if (!config) return [];
+  const out: FormFieldConfig[] = [];
+  for (const [toggleKey, fieldDef] of Object.entries(LEGACY_TOGGLE_FIELDS)) {
+    if (config[toggleKey as keyof ClientFormConfigShape]) out.push(fieldDef);
+  }
+  return out;
+}
+
+function resolveAllFields(
+  config: ClientFormConfigShape | null | undefined,
+): FormFieldConfig[] {
+  const fromToggles = legacyTogglesToFields(config);
+  const fromAdmin = (config?.fields ?? []).filter((f) => !("archived" in f) || !(f as FormFieldConfig & { archived?: boolean }).archived);
+  // Admin-managed fields override legacy toggles on key collision (edge case).
+  const seen = new Set(fromAdmin.map((f) => f.key));
+  const merged = [...fromAdmin];
+  for (const f of fromToggles) {
+    if (!seen.has(f.key)) merged.push(f);
+  }
+  return merged;
 }
 
 export interface CandidateFormValues {
@@ -48,8 +128,9 @@ interface CandidateFormProps {
 }
 
 function buildFullSchema(formConfig: ClientFormConfigShape | null | undefined) {
+  const allFields = resolveAllFields(formConfig);
   const dynamic = buildDynamicSchema(
-    formConfig?.fields ? { fields: formConfig.fields } : null,
+    allFields.length > 0 ? { fields: allFields } : null,
   );
   const core = registerCandidateRequestSchema._zod.def.shape;
   return z.object({
@@ -109,7 +190,8 @@ export function CandidateForm({
     firstFieldRef.current?.focus();
   }, []);
 
-  const fields = formConfig?.fields ?? [];
+  // 008 FR-FC-005 — union of admin-managed `fields[]` plus the 8 legacy toggles.
+  const fields = useMemo(() => resolveAllFields(formConfig), [formConfig]);
   const errors = form.formState.errors;
   // Calculamos los entries en cada render — son baratos (≤ ~10 campos) y evitamos
   // useMemo para no crear una clave de dependencia inestable a partir de objetos

@@ -11,19 +11,29 @@ interface AbilityUser {
 }
 
 export function defineAbilityFor(user: AbilityUser): AppAbility {
-  const { can, build } = new AbilityBuilder<AppAbility>(createMongoAbility);
+  const { can, cannot, build } = new AbilityBuilder<AppAbility>(
+    createMongoAbility,
+  );
 
   switch (user.role) {
     case "admin":
       can("manage", "all");
+      // 008-ux-roles-refinements / US2 (FR-CG-001 / FR-CG-002) — only recruiters
+      // may create candidates. Admins retain read/update (and reactivate), but
+      // the "Nuevo candidato" entry point is hidden via this cannot() rule.
+      cannot("create", "Candidate");
       break;
     case "manager":
       can("read", "all");
-      can(["create", "update"], ["Candidate", "Placement"]);
+      can("update", ["Candidate", "Placement"]);
+      can("create", "Placement");
+      // FR-CG-002 — managers cannot create candidates either.
       break;
     case "account_executive":
       can("read", ["Dashboard", "Candidate", "Client", "Placement"]);
-      can(["create", "update"], ["Candidate", "Placement"]);
+      can("update", ["Candidate", "Placement"]);
+      can("create", "Placement");
+      // FR-CG-002 — AEs cannot create candidates.
       break;
     case "recruiter":
       can("read", ["Dashboard", "Candidate"]);

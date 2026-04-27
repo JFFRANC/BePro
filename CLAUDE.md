@@ -156,6 +156,9 @@ Per-domain CLAUDE.md files:
 - `window.localStorage` for sidebar collapsed state and theme preference (via `next-themes`). No backend storage introduced by this feature. (005-app-shell-layout)
 - TypeScript 5.8.3 (strict mode) + React 19.1, Vite 6.3, Tailwind CSS 4.1, shadcn/ui (dropdown-menu, button), `next-themes` 0.4.6, lucide-react 0.577 (Sun/Moon/Monitor icons), Zustand 5.0 (unchanged) (006-theme-toggle)
 - `window.localStorage` via `next-themes` built-in persistence under key `bepro.theme`. No backend storage. (006-theme-toggle)
+- TypeScript 5.8.3 (strict mode) across frontend, API, and shared packages. (008-ux-roles-refinements)
+- Neon PostgreSQL with RLS. No new tables. Existing tables touched: `candidates` (relax `privacy_notice_id` to nullable/optional at API layer only — **no migration**, the column stays), `clients.form_config` JSONB gets new keys under its existing shape, `client_assignments` receives batch diffs. (008-ux-roles-refinements)
 
 ## Recent Changes
+- 008-ux-roles-refinements: Header user menu with logout, recruiter-only candidate create (API 403 + CASL), inline status transition per row (optimistic + grouped Spanish menu), Spanish enum labels as default, multi-AE batch assignment (single-save diff), admin-managed custom `formConfig.fields[]` (archive-on-remove), privacy-notice UI removal (server auto-stamps from active notice, no migration), hidden login tenant field via `VITE_LOGIN_TENANT_FIXED`. Constitution bumped to v1.0.2 (§VI privacy-notice clause rephrased; branch-naming extended). See `docs/architecture/ADR-008-ux-roles-refinements.md`.
 - 002-jwt-auth-module: JWT auth with opaque refresh tokens (httpOnly cookie), tenant resolution via slug, per-account brute-force lockout, role-based middleware, RLS tenant isolation
