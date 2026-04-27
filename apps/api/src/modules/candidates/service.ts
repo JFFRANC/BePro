@@ -187,22 +187,50 @@ export async function createCandidate(
     throw new ClientNotFoundError();
   }
 
-  // 2) Validar el privacy_notice_id contra el aviso activo del tenant.
-  const [notice] = await db
-    .select({
-      id: privacyNotices.id,
-      version: privacyNotices.version,
-      isActive: privacyNotices.isActive,
-    })
-    .from(privacyNotices)
-    .where(
-      and(
-        eq(privacyNotices.id, input.privacy_notice_id),
-        eq(privacyNotices.tenantId, ctx.tenantId),
-      ),
-    );
-  if (!notice || !notice.isActive) {
-    throw new PrivacyNoticeMismatchError();
+  // 2) Privacy-notice evidence (008 US7 / constitution v1.0.2 §VI):
+  //    - If caller supplies `privacy_notice_id` (legacy client), validate against
+  //      the tenant's active notice — preserves backwards compatibility.
+  //    - If omitted (new recruiter-driven UI), auto-stamp from the active notice
+  //      so the NOT-NULL DB column + append-only audit trail stay intact without
+  //      a migration. UI no longer exposes the checkbox (FR-RP-001, FR-RP-005).
+  let notice:
+    | { id: string; version: string; isActive: boolean }
+    | undefined;
+  if (input.privacy_notice_id) {
+    [notice] = await db
+      .select({
+        id: privacyNotices.id,
+        version: privacyNotices.version,
+        isActive: privacyNotices.isActive,
+      })
+      .from(privacyNotices)
+      .where(
+        and(
+          eq(privacyNotices.id, input.privacy_notice_id),
+          eq(privacyNotices.tenantId, ctx.tenantId),
+        ),
+      );
+    if (!notice || !notice.isActive) {
+      throw new PrivacyNoticeMismatchError();
+    }
+  } else {
+    [notice] = await db
+      .select({
+        id: privacyNotices.id,
+        version: privacyNotices.version,
+        isActive: privacyNotices.isActive,
+      })
+      .from(privacyNotices)
+      .where(
+        and(
+          eq(privacyNotices.tenantId, ctx.tenantId),
+          eq(privacyNotices.isActive, true),
+        ),
+      )
+      .limit(1);
+    if (!notice) {
+      throw new PrivacyNoticeMismatchError();
+    }
   }
 
   // 3) Validar additional_fields contra el form_config del cliente (R7 / FR-012).

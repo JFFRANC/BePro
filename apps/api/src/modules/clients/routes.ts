@@ -9,6 +9,9 @@ import {
   createPositionSchema,
   updatePositionSchema,
   documentTypeSchema,
+  batchAssignmentsSchema,
+  createFormConfigFieldSchema,
+  patchFormConfigFieldSchema,
 } from "@bepro/shared";
 import type { HonoEnv } from "../../types.js";
 import { zValidator } from "../../lib/validator.js";
@@ -27,6 +30,14 @@ import {
   createAssignment,
   listAssignments,
   deleteAssignment,
+  batchAssignClient,
+  BatchAssignmentValidationError,
+  createFormConfigField,
+  patchFormConfigField,
+  ClientNotFoundError,
+  FormConfigFieldNotFoundError,
+  FormConfigFieldDuplicateKeyError,
+  FormConfigFieldImmutableError,
   createContact,
   listContacts,
   updateContact,
@@ -199,6 +210,148 @@ clientsRoutes.delete(
     }
 
     return c.body(null, 204);
+  },
+);
+
+// POST /clients/:clientId/assignments/batch — 008 US5 / FR-AS-002..005
+// Atomic diff: sets the full list of account_executive assignments for the
+// client in one transaction. Admin or manager only.
+clientsRoutes.post(
+  "/:clientId/assignments/batch",
+  requireRole("admin", "manager"),
+  zValidator("json", batchAssignmentsSchema),
+  async (c) => {
+    const user = c.get("user");
+    const tenantId = c.get("tenantId");
+    const db = c.get("db");
+    const clientId = c.req.param("clientId");
+    const body = c.req.valid("json");
+
+    try {
+      const result = await batchAssignClient(
+        db,
+        tenantId,
+        user.id,
+        clientId,
+        body,
+      );
+      return c.json(result);
+    } catch (err) {
+      if (err instanceof BatchAssignmentValidationError) {
+        const messages: Record<BatchAssignmentValidationError["code"], string> = {
+          user_not_found: "Uno o más userIds no existen en este tenant.",
+          user_inactive: "Uno o más usuarios están inactivos.",
+          invalid_role:
+            "Usuarios con rol admin/manager no pueden asignarse a clientes; sólo account_executive o recruiter.",
+          recruiter_leader_not_in_set:
+            "accountExecutiveId de un reclutador no está en la lista de AEs deseados.",
+          recruiter_leader_not_ae:
+            "accountExecutiveId apunta a un usuario que no es account_executive.",
+        };
+        return c.json(
+          {
+            error: err.code,
+            message: messages[err.code],
+            offenders: err.offenders,
+          },
+          422,
+        );
+      }
+      if ((err as Error).message === "CLIENT_NOT_FOUND") {
+        return c.json({ error: "Cliente no encontrado" }, 404);
+      }
+      throw err;
+    }
+  },
+);
+
+// ========================================
+// Form-config custom fields (008 US6)
+// ========================================
+
+// POST /clients/:clientId/form-config/fields — admin only, create a field.
+clientsRoutes.post(
+  "/:clientId/form-config/fields",
+  requireRole("admin"),
+  zValidator("json", createFormConfigFieldSchema),
+  async (c) => {
+    const user = c.get("user");
+    const tenantId = c.get("tenantId");
+    const db = c.get("db");
+    const clientId = c.req.param("clientId");
+    const body = c.req.valid("json");
+
+    try {
+      const field = await createFormConfigField(db, tenantId, user.id, clientId, {
+        key: body.key,
+        label: body.label,
+        type: body.type,
+        required: body.required,
+        options: body.options ?? null,
+      });
+      return c.json({ clientId, field }, 201);
+    } catch (err) {
+      if (err instanceof ClientNotFoundError) {
+        return c.json({ error: "not_found", message: "Cliente no encontrado." }, 404);
+      }
+      if (err instanceof FormConfigFieldDuplicateKeyError) {
+        return c.json(
+          {
+            error: "duplicate_key",
+            message: `La clave '${err.key}' ya existe en la configuración de este cliente.`,
+          },
+          409,
+        );
+      }
+      throw err;
+    }
+  },
+);
+
+// PATCH /clients/:clientId/form-config/fields/:key — update / archive / unarchive.
+clientsRoutes.patch(
+  "/:clientId/form-config/fields/:key",
+  requireRole("admin"),
+  zValidator("json", patchFormConfigFieldSchema),
+  async (c) => {
+    const user = c.get("user");
+    const tenantId = c.get("tenantId");
+    const db = c.get("db");
+    const clientId = c.req.param("clientId");
+    const key = c.req.param("key");
+    const body = c.req.valid("json");
+
+    try {
+      const field = await patchFormConfigField(
+        db,
+        tenantId,
+        user.id,
+        clientId,
+        key,
+        body,
+      );
+      return c.json({ clientId, field });
+    } catch (err) {
+      if (err instanceof ClientNotFoundError) {
+        return c.json({ error: "not_found", message: "Cliente no encontrado." }, 404);
+      }
+      if (err instanceof FormConfigFieldNotFoundError) {
+        return c.json(
+          { error: "field_not_found", message: "Campo no encontrado." },
+          404,
+        );
+      }
+      if (err instanceof FormConfigFieldImmutableError) {
+        return c.json(
+          {
+            error: "immutable_field",
+            message: `No puedes modificar '${err.attemptedField}' de un campo existente.`,
+          },
+          422,
+        );
+      }
+      throw err;
+    }
   },
 );
 

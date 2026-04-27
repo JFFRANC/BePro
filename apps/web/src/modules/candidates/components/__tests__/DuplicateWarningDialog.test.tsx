@@ -38,7 +38,8 @@ describe("DuplicateWarningDialog (US1)", () => {
     expect(screen.getByText(/posibles candidatos duplicados/i)).toBeDefined();
     expect(screen.getByText("Juan Pérez")).toBeDefined();
     expect(screen.getByText(/maria recruiter/i)).toBeDefined();
-    expect(screen.getByText(/interview scheduled/i)).toBeDefined();
+    // 008-ux-roles-refinements / US4 — statusLabel now defaults to Spanish.
+    expect(screen.getByText(/entrevista programada/i)).toBeDefined();
     expect(screen.getByRole("button", { name: /sí, registrar/i })).toBeDefined();
     expect(screen.getByRole("button", { name: /cancelar/i })).toBeDefined();
     // L7: link al detalle del duplicado

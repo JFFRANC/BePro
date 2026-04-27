@@ -7,6 +7,11 @@ import {
   createAssignment,
   listAssignments,
   deleteAssignment,
+  batchAssignClient,
+  type IBatchAssignmentsRequest,
+  createFormConfigField,
+  patchFormConfigField,
+  type ICustomFormField,
   createContact,
   listContacts,
   updateContact,
@@ -117,6 +122,59 @@ export function useDeleteAssignment(clientId: string) {
     mutationFn: (assignmentId: string) => deleteAssignment(clientId, assignmentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: CLIENT_KEYS.assignments(clientId) });
+      queryClient.invalidateQueries({ queryKey: CLIENT_KEYS.detail(clientId) });
+    },
+  });
+}
+
+// 008 expansion — polymorphic batch-assign for a client (AE + recruiter).
+export function useBatchAssignClient(clientId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: IBatchAssignmentsRequest) =>
+      batchAssignClient(clientId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: CLIENT_KEYS.assignments(clientId) });
+      queryClient.invalidateQueries({ queryKey: CLIENT_KEYS.detail(clientId) });
+    },
+  });
+}
+
+// 008-ux-roles-refinements / US6 — admin-managed custom formConfig fields.
+export function useCreateFormConfigField(clientId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      input: {
+        key: string;
+        label: string;
+        type: ICustomFormField["type"];
+        required?: boolean;
+        options?: string[] | null;
+      },
+    ) => createFormConfigField(clientId, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: CLIENT_KEYS.detail(clientId) });
+    },
+  });
+}
+
+export function usePatchFormConfigField(clientId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      key,
+      input,
+    }: {
+      key: string;
+      input: {
+        label?: string;
+        required?: boolean;
+        options?: string[] | null;
+        archived?: boolean;
+      };
+    }) => patchFormConfigField(clientId, key, input),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: CLIENT_KEYS.detail(clientId) });
     },
   });

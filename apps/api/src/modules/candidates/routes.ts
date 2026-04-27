@@ -16,6 +16,9 @@ import {
 import type { HonoEnv } from "../../types.js";
 import { zValidator } from "../../lib/validator.js";
 import { authMiddleware, tenantMiddleware } from "../auth/middleware.js";
+import type { MiddlewareHandler } from "hono";
+import { eq } from "drizzle-orm";
+import { users as usersTable } from "@bepro/db";
 import {
   AttachmentForbiddenError,
   AttachmentNotFoundError,
@@ -53,6 +56,38 @@ export const candidatesRoutes = new Hono<HonoEnv>();
 
 // Auth + tenant (RLS via SET LOCAL) en todas las rutas del módulo.
 candidatesRoutes.use("*", authMiddleware, tenantMiddleware);
+
+// 008-ux-roles-refinements / US2 — Only recruiters (including freelancer
+// recruiters) may register candidates (FR-CG-001). Returns the spec-contract
+// 403 body shape on rejection, and also blocks inactive/terminated recruiters
+// (edge case L168) with a dedicated message.
+const requireActiveRecruiter: MiddlewareHandler<HonoEnv> = async (c, next) => {
+  const user = c.get("user");
+  if (user.role !== "recruiter") {
+    return c.json(
+      {
+        error: "forbidden",
+        message: "Solo reclutadores pueden registrar candidatos.",
+      },
+      403,
+    );
+  }
+  const db = c.get("db");
+  const [row] = await db
+    .select({ isActive: usersTable.isActive })
+    .from(usersTable)
+    .where(eq(usersTable.id, user.id));
+  if (!row || !row.isActive) {
+    return c.json(
+      {
+        error: "forbidden",
+        message: "Reclutador inactivo no puede registrar candidatos.",
+      },
+      403,
+    );
+  }
+  await next();
+};
 
 // Endpoint de salud (módulo montado).
 candidatesRoutes.get("/_ping", (c) =>
@@ -414,8 +449,10 @@ candidatesRoutes.post(
 );
 
 // POST /api/candidates — Registrar candidato (US1, contracts §1).
+// 008 US2 — requireActiveRecruiter enforces recruiter-only gate (FR-CG-001).
 candidatesRoutes.post(
   "/",
+  requireActiveRecruiter,
   zValidator("json", registerCandidateRequestSchema),
   async (c) => {
     const user = c.get("user");

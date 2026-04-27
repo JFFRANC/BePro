@@ -17,6 +17,7 @@
     "@bepro/shared": "workspace:*",
     "@casl/ability": "^6.8.0",
     "@casl/react": "^5.0.1",
+    "@fontsource-variable/geist": "^5.2.8",
     "@hookform/resolvers": "^5.2.2",
     "@tanstack/react-query": "^5.91.2",
     "@tanstack/react-table": "^8.21.3",
