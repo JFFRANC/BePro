@@ -18,16 +18,15 @@ import {
   type CandidateFormValues,
   type ClientFormConfigShape,
 } from "../components/CandidateForm";
-import { PrivacyNoticeCheckbox } from "../components/PrivacyNoticeCheckbox";
+// 008-ux-roles-refinements / US7 — PrivacyNoticeCheckbox removed from the flow
+// (FR-RP-001 / FR-RP-005). Evidence is collected offline by the recruiter per
+// constitution v1.0.2 §VI.
 import {
   AttachmentUploader,
   type PendingAttachment,
 } from "../components/AttachmentUploader";
 import { DuplicateWarningDialog } from "../components/DuplicateWarningDialog";
-import {
-  useActivePrivacyNotice,
-  useCreateCandidate,
-} from "../hooks/useCandidates";
+import { useCreateCandidate } from "../hooks/useCandidates";
 import {
   initAttachment,
   uploadAttachmentBinary,
@@ -39,8 +38,6 @@ export function NewCandidatePage() {
   const initialClientId = searchParams.get("client") ?? "";
 
   const [clientId, setClientId] = useState<string>(initialClientId);
-  const [acknowledged, setAcknowledged] = useState(false);
-  const [acknowledgedError, setAcknowledgedError] = useState<string | undefined>();
   const [attachment, setAttachment] = useState<PendingAttachment | null>(null);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -58,7 +55,6 @@ export function NewCandidatePage() {
   const selectedClient = clientsQuery.data?.data.find((c) => c.id === clientId);
   const formConfig = (selectedClient?.formConfig ?? {}) as ClientFormConfigShape;
 
-  const noticeQuery = useActivePrivacyNotice();
   const createCandidate = useCreateCandidate({
     onCreated: async (cand) => {
       // Si hay un adjunto pendiente, lo subimos ahora (post-creacion).
@@ -92,21 +88,9 @@ export function NewCandidatePage() {
   });
 
   function handleValidSubmit(values: CandidateFormValues) {
-    if (!noticeQuery.data) {
-      setAcknowledgedError("No hay aviso de privacidad activo en el tenant.");
-      return;
-    }
-    if (!acknowledged) {
-      setAcknowledgedError("Debes aceptar el aviso de privacidad.");
-      return;
-    }
-    setAcknowledgedError(undefined);
-
-    createCandidate.submit({
-      ...values,
-      privacy_notice_id: noticeQuery.data.id,
-      privacy_acknowledged: true,
-    });
+    // 008 US7 / FR-RP-001/002 — privacy_notice_id intentionally omitted; the
+    // server auto-stamps from the tenant's active notice for DB/audit integrity.
+    createCandidate.submit(values);
   }
 
   const showDuplicateDialog = createCandidate.duplicates.length > 0;
@@ -185,21 +169,6 @@ export function NewCandidatePage() {
               />
             </FormSection>
 
-            <FormSection
-              title={requiredLabel("Aviso de privacidad")}
-            >
-              <PrivacyNoticeCheckbox
-                notice={noticeQuery.data ?? null}
-                loading={noticeQuery.isLoading}
-                checked={acknowledged}
-                onCheckedChange={(v) => {
-                  setAcknowledged(v);
-                  if (v) setAcknowledgedError(undefined);
-                }}
-                error={acknowledgedError}
-              />
-            </FormSection>
-
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
               <Button
                 type="button"
@@ -212,7 +181,7 @@ export function NewCandidatePage() {
               <Button
                 type="submit"
                 form="candidate-form"
-                disabled={isSubmitting || noticeQuery.isLoading}
+                disabled={isSubmitting}
               >
                 {isSubmitting ? "Registrando..." : "Registrar candidato"}
               </Button>

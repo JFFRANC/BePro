@@ -3,9 +3,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, type LoginFormValues } from "@bepro/shared";
 import { useAuth } from "../hooks/useAuth";
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+
+// 008-ux-roles-refinements / US8 — single-tenant deploys ocultan el campo
+// "Organización" y envían el slug fijo. Se evalúa al cargar el módulo para
+// que `vi.stubEnv` + `vi.resetModules` puedan controlarlo en pruebas.
+const FIXED_TENANT_SLUG = (
+  import.meta.env.VITE_LOGIN_TENANT_FIXED ?? ""
+).trim();
 
 export function LoginForm() {
   const { login } = useAuth();
@@ -20,14 +24,15 @@ export function LoginForm() {
     defaultValues: {
       email: "",
       password: "",
-      tenantSlug: "",
+      tenantSlug: FIXED_TENANT_SLUG,
     },
   });
 
   const onSubmit = async (data: LoginFormValues) => {
     setError(null);
     try {
-      await login(data.email, data.password, data.tenantSlug);
+      const tenantSlug = FIXED_TENANT_SLUG || data.tenantSlug;
+      await login(data.email, data.password, tenantSlug);
     } catch (err) {
       const axiosError = err as { response?: { data?: { error?: string } } };
       setError(
@@ -38,64 +43,68 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 w-full max-w-sm">
-      <div>
-        <Label htmlFor="tenantSlug" className="mb-1">
-          Organización
-        </Label>
-        <Input
-          id="tenantSlug"
-          type="text"
-          placeholder="mi-empresa"
-          {...register("tenantSlug")}
-        />
-        {errors.tenantSlug && (
-          <p className="text-sm text-destructive mt-1">{errors.tenantSlug.message}</p>
-        )}
-      </div>
+      {!FIXED_TENANT_SLUG && (
+        <div>
+          <label htmlFor="tenantSlug" className="block text-sm font-medium text-foreground mb-1">
+            Organización
+          </label>
+          <input
+            id="tenantSlug"
+            type="text"
+            placeholder="mi-empresa"
+            autoComplete="organization"
+            {...register("tenantSlug")}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          />
+          {errors.tenantSlug && (
+            <p className="text-sm text-red-500 mt-1">{errors.tenantSlug.message}</p>
+          )}
+        </div>
+      )}
 
       <div>
-        <Label htmlFor="email" className="mb-1">
+        <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1">
           Email
-        </Label>
-        <Input
+        </label>
+        <input
           id="email"
           type="email"
           placeholder="correo@ejemplo.com"
-          error={!!errors.email}
           {...register("email")}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
         />
         {errors.email && (
-          <p className="text-sm text-destructive mt-1">{errors.email.message}</p>
+          <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>
         )}
       </div>
 
       <div>
-        <Label htmlFor="password" className="mb-1">
+        <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1">
           Contraseña
-        </Label>
-        <Input
+        </label>
+        <input
           id="password"
           type="password"
           placeholder="••••••••"
-          error={!!errors.password}
           {...register("password")}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
         />
         {errors.password && (
-          <p className="text-sm text-destructive mt-1">{errors.password.message}</p>
+          <p className="text-sm text-red-500 mt-1">{errors.password.message}</p>
         )}
       </div>
 
       {error && (
-        <p className="text-sm text-destructive bg-destructive/10 rounded-md p-2">{error}</p>
+        <p className="text-sm text-red-500 bg-red-50 rounded-md p-2">{error}</p>
       )}
 
-      <Button
+      <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full"
+        className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
       >
         {isSubmitting ? "Iniciando sesión..." : "Iniciar sesión"}
-      </Button>
+      </button>
     </form>
   );
 }

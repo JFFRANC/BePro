@@ -68,7 +68,7 @@ Security is built into every layer, not bolted on. LFPDPPP (Mexico's data protec
 - Authentication: JWT (15-60 min expiry) + refresh tokens (7 days) with rotation
 - Data deletion: soft delete only (`is_active` flag) — never hard delete PII
 - PII MUST NOT be logged in plain text
-- Privacy notice MUST be presented during candidate registration
+- Privacy-notice evidence MUST be captured per LFPDPPP for every registered candidate. For recruiter-driven registrations, evidence is collected offline by the recruiter and retained outside the candidate-create API flow; historical database rows for prior in-product acknowledgements MUST be preserved read-only at rest. A future feature MAY re-introduce an in-product surface for attaching a signed offline notice.
 - API protection: rate limiting (Cloudflare built-in), CORS restricted to known origins
 - CSD certificates (future invoicing): encrypted at rest in R2
 - Rejection categories on candidates MUST be captured for business intelligence without exposing PII in logs
@@ -116,10 +116,10 @@ Two developers: Hector + Javi. Both review and approve specs. Tasks can be paral
 
 ### Branch Strategy
 
-- Branch flow: `feature/* → development → testing → main`
+- Branch flow: `feature/* → development → testing → main` (also accepted: spec-kit numbered branches like `008-ux-roles-refinements` created by `/speckit.specify`)
 - PRs required for merge to main
 - Direct commits to `main`, `testing`, or `development` are prohibited
-- Feature branches: `feature/descriptive-name`, fix branches: `fix/descriptive-name`
+- Feature branches: `feature/descriptive-name` or `NNN-kebab-slug` (spec-kit), fix branches: `fix/descriptive-name`
 
 ### CI/CD Pipeline
 
@@ -160,8 +160,9 @@ This constitution supersedes all other development practices and guidelines for 
 - If a specialized skill/agent contradicts a constitution principle, the constitution wins
 - Unresolved conflicts are escalated to both developers for a governance decision
 
-**Version**: 1.0.1 | **Ratified**: 2026-03-27 | **Last Amended**: 2026-04-21
+**Version**: 1.0.2 | **Ratified**: 2026-03-27 | **Last Amended**: 2026-04-23
 
 **Changelog**
 
+- **1.0.2 (2026-04-23)**: PATCH — §VI privacy-notice clause clarified for recruiter-driven registrations (evidence is collected offline; historical rows preserved read-only at rest). Branch Strategy extended to accept spec-kit numbered branches alongside `feature/descriptive-name`. No principle added or removed.
 - **1.0.1 (2026-04-21)**: PATCH — Clarified "Unique constraints" row in Security & Compliance: candidate duplicate detection uses a non-unique lookup index, not a UNIQUE constraint, because FR-014/FR-015 require a confirmable warning (not a hard block). No principle was added or removed.

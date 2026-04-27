@@ -1,5 +1,6 @@
 import { TenantBadge } from "./TenantBadge";
 import { ThemeToggle } from "./ThemeToggle";
+import { UserMenu } from "./UserMenu";
 
 export function Header() {
   return (
@@ -18,7 +19,8 @@ export function Header() {
         className="flex items-center justify-end gap-2"
       >
         <ThemeToggle />
-        {/* Reservado para Phase 9: NotificationsBell, UserMenu */}
+        {/* 008-ux-roles-refinements / US1 — identity + logout (FR-HD-001..004). */}
+        <UserMenu />
       </div>
     </header>
   );

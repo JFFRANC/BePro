@@ -56,19 +56,5 @@ API calls go through the Vite dev proxy (`/api` → `localhost:8787`).
 ## Commands
 - `pnpm dev` — Start Vite dev server (port 5173)
 - `pnpm build` — Type check + production build
-- `pnpm test` — Run Vitest (component + hook tests)
-- `pnpm test:e2e` — Run Playwright E2E (requires `pnpm exec playwright install chromium` once)
+- `pnpm test` — Run Vitest
 - `pnpm typecheck` — Type check only
-
-## Implemented Modules
-
-| Module | Path | Summary |
-|---|---|---|
-| `auth` | `src/modules/auth/` | Login form, session hook, role-aware route guards |
-| `users` | `src/modules/users/` | User admin UI (list, create, edit, CSV import, password reset) |
-| `clients` | `src/modules/clients/` | Client CRUD UI, contacts, positions, documents, map location |
-| `candidates` | `src/modules/candidates/` | List (role-scoped filters + URL state), detail, new (dynamic form via `form_config`), duplicate warning, privacy acknowledgement, status transitions with FSM-aware dialog, attachments, admin reactivation, tenant category admin |
-| Design system | `src/components/ui/` | shadcn/ui + tokens, theme toggle (light/dark/system), skeletons, toasts, error boundary |
-| App shell | `src/components/layout/` | Role-aware sidebar (CASL abilities), breadcrumbs, command palette |
-
-Future modules: `placements`, `audit` viewer, dashboards per role.

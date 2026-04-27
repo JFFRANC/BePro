@@ -4,8 +4,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useCandidatesList } from "../hooks/useCandidates";
+import { useAppAbility } from "@/components/ability-provider";
 import { useClients } from "@/modules/clients/hooks/useClients";
 import { StatusBadge } from "../components/StatusBadge";
+import { InlineStatusMenu } from "../components/InlineStatusMenu";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/search-input";
@@ -63,6 +65,9 @@ function TableSkeleton() {
           <TableCell>
             <Skeleton className="h-4 w-28" />
           </TableCell>
+          <TableCell>
+            <Skeleton className="h-8 w-28 ml-auto" />
+          </TableCell>
         </TableRow>
       ))}
     </>
@@ -107,6 +112,10 @@ export function CandidateListPage() {
   );
 
   const { data, isLoading, error } = useCandidatesList(queryParams);
+  // 008-ux-roles-refinements / US2 (FR-CG-002) — hide "Registrar candidato"
+  // entry points unless the viewer has ability.create Candidate (recruiter-only).
+  const ability = useAppAbility();
+  const canCreateCandidate = ability.can("create", "Candidate");
 
   function update(field: string, value: string | null) {
     const next = new URLSearchParams(params);
@@ -195,12 +204,14 @@ export function CandidateListPage() {
         title="Candidatos"
         description="Lista de candidatos visibles para tu rol."
         action={
-          <Link to="/candidates/new">
-            <Button>
-              <UserPlus className="h-4 w-4 mr-2" aria-hidden="true" />
-              Registrar candidato
-            </Button>
-          </Link>
+          canCreateCandidate ? (
+            <Link to="/candidates/new">
+              <Button>
+                <UserPlus className="h-4 w-4 mr-2" aria-hidden="true" />
+                Registrar candidato
+              </Button>
+            </Link>
+          ) : undefined
         }
       />
 
@@ -428,6 +439,7 @@ export function CandidateListPage() {
                 >
                   Actualizado
                 </TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -435,7 +447,7 @@ export function CandidateListPage() {
                 <TableSkeleton />
               ) : sortedItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-48 p-0">
+                  <TableCell colSpan={6} className="h-48 p-0">
                     <EmptyState
                       icon={Users}
                       title="No hay candidatos en tu alcance"
@@ -449,14 +461,14 @@ export function CandidateListPage() {
                           <Button variant="outline" onClick={clearAll}>
                             Limpiar filtros
                           </Button>
-                        ) : (
+                        ) : canCreateCandidate ? (
                           <Link to="/candidates/new">
                             <Button>
                               <UserPlus className="h-4 w-4 mr-2" aria-hidden="true" />
                               Registrar candidato
                             </Button>
                           </Link>
-                        )
+                        ) : undefined
                       }
                     />
                   </TableCell>
@@ -496,6 +508,13 @@ export function CandidateListPage() {
                         month: "short",
                         year: "numeric",
                       })}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {/* 008 US3 (FR-ST-001..006) — per-row inline transition. */}
+                      <InlineStatusMenu
+                        candidateId={c.id}
+                        currentStatus={c.status}
+                      />
                     </TableCell>
                   </TableRow>
                 ))

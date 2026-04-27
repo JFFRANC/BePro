@@ -1,4 +1,4 @@
-import { eq, and, ilike, sql, count } from "drizzle-orm";
+import { eq, and, ilike, sql, count, inArray } from "drizzle-orm";
 import type { Database } from "@bepro/db";
 import {
   clients,
@@ -443,6 +443,522 @@ export async function deleteAssignment(
   }, null);
 
   return true;
+}
+
+// -- Batch assignments (008 expansion — polymorphic AE + recruiter) --
+
+export type BatchAssignmentOffenderReason =
+  | "not_in_tenant"
+  | "inactive"
+  | "invalid_role"
+  | "leader_not_in_set"
+  | "leader_role_mismatch";
+
+export class BatchAssignmentValidationError extends Error {
+  constructor(
+    public readonly code:
+      | "user_not_found"
+      | "user_inactive"
+      | "invalid_role"
+      | "recruiter_leader_not_in_set"
+      | "recruiter_leader_not_ae",
+    public readonly offenders: {
+      userId: string;
+      reason: BatchAssignmentOffenderReason;
+    }[],
+  ) {
+    super(`${code}: ${offenders.map((o) => o.userId).join(", ")}`);
+    this.name = "BatchAssignmentValidationError";
+  }
+}
+
+export interface BatchAssignmentsDesired {
+  accountExecutives: string[];
+  recruiters: { userId: string; accountExecutiveId?: string }[];
+}
+
+export interface BatchAssignmentsResult {
+  clientId: string;
+  added: {
+    userId: string;
+    role: "account_executive" | "recruiter";
+    at: string;
+  }[];
+  removed: {
+    userId: string;
+    reason: "explicit" | "cascade";
+    at: string;
+  }[];
+  reparented: {
+    userId: string;
+    from: string | null;
+    to: string | null;
+    at: string;
+  }[];
+  unchanged: string[];
+}
+
+/**
+ * 008 expansion — atomic desired-state replacement of client assignments,
+ * supporting both AEs and recruiters. Recruiters may optionally carry an
+ * `accountExecutiveId` pointing at an AE in the desired set (their "líder"
+ * on this client). Removing an AE whose recruiters are not re-parented
+ * cascades to delete those recruiter rows. Admin/manager only (guarded at
+ * the route layer).
+ */
+export async function batchAssignClient(
+  db: Database,
+  tenantId: string,
+  actorId: string,
+  clientId: string,
+  desired: BatchAssignmentsDesired,
+): Promise<BatchAssignmentsResult> {
+  const [client] = await db
+    .select({ id: clients.id })
+    .from(clients)
+    .where(eq(clients.id, clientId))
+    .limit(1);
+  if (!client) {
+    throw new Error("CLIENT_NOT_FOUND");
+  }
+
+  const desiredAEs = Array.from(new Set(desired.accountExecutives));
+  const desiredRecruiters = desired.recruiters;
+
+  // Live role validation against the DB: guards against tampering and against
+  // role changes since the UI fetched its picker data.
+  const allDesiredIds = Array.from(
+    new Set([
+      ...desiredAEs,
+      ...desiredRecruiters.map((r) => r.userId),
+      ...desiredRecruiters
+        .map((r) => r.accountExecutiveId)
+        .filter((id): id is string => Boolean(id)),
+    ]),
+  );
+
+  const userRows =
+    allDesiredIds.length > 0
+      ? await db
+          .select({
+            id: users.id,
+            role: users.role,
+            isActive: users.isActive,
+          })
+          .from(users)
+          .where(inArray(users.id, allDesiredIds))
+      : [];
+  const userById = new Map(userRows.map((u) => [u.id, u]));
+
+  // 1. Existence + active
+  const missing: { userId: string; reason: BatchAssignmentOffenderReason }[] =
+    [];
+  const inactive: { userId: string; reason: BatchAssignmentOffenderReason }[] =
+    [];
+  for (const id of allDesiredIds) {
+    const row = userById.get(id);
+    if (!row) missing.push({ userId: id, reason: "not_in_tenant" });
+    else if (!row.isActive)
+      inactive.push({ userId: id, reason: "inactive" });
+  }
+  if (missing.length > 0) {
+    throw new BatchAssignmentValidationError("user_not_found", missing);
+  }
+  if (inactive.length > 0) {
+    throw new BatchAssignmentValidationError("user_inactive", inactive);
+  }
+
+  // 2. Role validation for AE entries
+  const aeRoleOffenders: {
+    userId: string;
+    reason: BatchAssignmentOffenderReason;
+  }[] = [];
+  for (const id of desiredAEs) {
+    const row = userById.get(id)!;
+    if (row.role !== "account_executive") {
+      aeRoleOffenders.push({ userId: id, reason: "invalid_role" });
+    }
+  }
+  // 3. Role validation for recruiter entries
+  for (const r of desiredRecruiters) {
+    const row = userById.get(r.userId)!;
+    if (row.role !== "recruiter") {
+      aeRoleOffenders.push({ userId: r.userId, reason: "invalid_role" });
+    }
+  }
+  if (aeRoleOffenders.length > 0) {
+    throw new BatchAssignmentValidationError("invalid_role", aeRoleOffenders);
+  }
+
+  // 4. Recruiter leader refs — live role check (Zod already ensures the id
+  //    appears in accountExecutives; here we confirm DB-side role).
+  const leaderOffenders: {
+    userId: string;
+    reason: BatchAssignmentOffenderReason;
+  }[] = [];
+  const desiredAESet = new Set(desiredAEs);
+  for (const r of desiredRecruiters) {
+    if (!r.accountExecutiveId) continue;
+    if (!desiredAESet.has(r.accountExecutiveId)) {
+      leaderOffenders.push({
+        userId: r.userId,
+        reason: "leader_not_in_set",
+      });
+      continue;
+    }
+    const leader = userById.get(r.accountExecutiveId)!;
+    if (leader.role !== "account_executive") {
+      leaderOffenders.push({
+        userId: r.userId,
+        reason: "leader_role_mismatch",
+      });
+    }
+  }
+  if (leaderOffenders.length > 0) {
+    const firstReason = leaderOffenders[0].reason;
+    throw new BatchAssignmentValidationError(
+      firstReason === "leader_role_mismatch"
+        ? "recruiter_leader_not_ae"
+        : "recruiter_leader_not_in_set",
+      leaderOffenders,
+    );
+  }
+
+  // Fetch current state.
+  const current = await db
+    .select({
+      userId: clientAssignments.userId,
+      accountExecutiveId: clientAssignments.accountExecutiveId,
+    })
+    .from(clientAssignments)
+    .where(eq(clientAssignments.clientId, clientId));
+  const currentByUser = new Map(
+    current.map((r) => [r.userId, r.accountExecutiveId ?? null]),
+  );
+
+  const desiredByUser = new Map<string, string | null>();
+  for (const id of desiredAEs) desiredByUser.set(id, null);
+  for (const r of desiredRecruiters)
+    desiredByUser.set(r.userId, r.accountExecutiveId ?? null);
+
+  const toAdd: { userId: string; accountExecutiveId: string | null }[] = [];
+  const toRemoveExplicit: string[] = [];
+  const toReparent: {
+    userId: string;
+    from: string | null;
+    to: string | null;
+  }[] = [];
+  const unchanged: string[] = [];
+
+  for (const [userId, desiredLeader] of desiredByUser) {
+    if (!currentByUser.has(userId)) {
+      toAdd.push({ userId, accountExecutiveId: desiredLeader });
+    } else {
+      const currentLeader = currentByUser.get(userId) ?? null;
+      if (currentLeader === desiredLeader) {
+        unchanged.push(userId);
+      } else {
+        toReparent.push({
+          userId,
+          from: currentLeader,
+          to: desiredLeader,
+        });
+      }
+    }
+  }
+  for (const [userId] of currentByUser) {
+    if (!desiredByUser.has(userId)) toRemoveExplicit.push(userId);
+  }
+
+  // Cascade: for every explicitly-removed AE, reclassify recruiters on this
+  // client whose leader was that AE as cascades — as long as they aren't in
+  // the desired set (unchanged/reparented) and aren't themselves AEs.
+  const removedAESet = new Set(toRemoveExplicit);
+  const toCascade: string[] = [];
+  const cascadedSet = new Set<string>();
+  for (const [userId, leaderId] of currentByUser) {
+    if (!leaderId) continue;
+    if (!removedAESet.has(leaderId)) continue;
+    if (desiredByUser.has(userId)) continue;
+    toCascade.push(userId);
+    cascadedSet.add(userId);
+  }
+  // Strip cascaded recruiters from the explicit-removal list so they are
+  // reported with reason="cascade" rather than "explicit".
+  const explicitRemovals = toRemoveExplicit.filter(
+    (id) => !cascadedSet.has(id),
+  );
+
+  // Apply writes inside a single transaction to make the diff atomic under RLS.
+  await db.transaction(async (tx) => {
+    // Deletions: explicit removes + cascades + reparent-old-rows.
+    const idsToDelete = new Set<string>([
+      ...explicitRemovals,
+      ...toCascade,
+      ...toReparent.map((r) => r.userId),
+    ]);
+    if (idsToDelete.size > 0) {
+      await tx
+        .delete(clientAssignments)
+        .where(
+          and(
+            eq(clientAssignments.clientId, clientId),
+            inArray(clientAssignments.userId, Array.from(idsToDelete)),
+          ),
+        );
+    }
+    // Insertions: new adds + reparent-new-rows.
+    const rowsToInsert = [
+      ...toAdd,
+      ...toReparent.map((r) => ({
+        userId: r.userId,
+        accountExecutiveId: r.to,
+      })),
+    ];
+    if (rowsToInsert.length > 0) {
+      await tx.insert(clientAssignments).values(
+        rowsToInsert.map((r) => ({
+          tenantId,
+          clientId,
+          userId: r.userId,
+          accountExecutiveId: r.accountExecutiveId,
+        })),
+      );
+    }
+  });
+
+  const nowIso = new Date().toISOString();
+  const result: BatchAssignmentsResult = {
+    clientId,
+    added: toAdd.map((r) => ({
+      userId: r.userId,
+      role: desiredAESet.has(r.userId)
+        ? ("account_executive" as const)
+        : ("recruiter" as const),
+      at: nowIso,
+    })),
+    removed: [
+      ...explicitRemovals.map((userId) => ({
+        userId,
+        reason: "explicit" as const,
+        at: nowIso,
+      })),
+      ...toCascade.map((userId) => ({
+        userId,
+        reason: "cascade" as const,
+        at: nowIso,
+      })),
+    ],
+    reparented: toReparent.map((r) => ({ ...r, at: nowIso })),
+    unchanged,
+  };
+
+  if (
+    result.added.length > 0 ||
+    result.removed.length > 0 ||
+    result.reparented.length > 0
+  ) {
+    await createAuditEvent(
+      db,
+      tenantId,
+      actorId,
+      "batch_update",
+      "client_assignment_batch",
+      clientId,
+      null,
+      {
+        clientId,
+        added: result.added,
+        removed: result.removed,
+        reparented: result.reparented,
+      },
+    );
+  }
+
+  return result;
+}
+
+// -- Form-config custom fields (008 US6 / FR-FC-001..006) --
+
+export class FormConfigFieldNotFoundError extends Error {
+  constructor() {
+    super("Field not found in client form_config.");
+    this.name = "FormConfigFieldNotFoundError";
+  }
+}
+export class FormConfigFieldDuplicateKeyError extends Error {
+  constructor(public readonly key: string) {
+    super(`Duplicate field key: ${key}`);
+    this.name = "FormConfigFieldDuplicateKeyError";
+  }
+}
+export class FormConfigFieldImmutableError extends Error {
+  constructor(public readonly attemptedField: "key" | "type") {
+    super(`Field '${attemptedField}' is immutable.`);
+    this.name = "FormConfigFieldImmutableError";
+  }
+}
+export class ClientNotFoundError extends Error {
+  constructor() {
+    super("Client not found.");
+    this.name = "ClientNotFoundError";
+  }
+}
+
+export interface CustomFieldDto {
+  key: string;
+  label: string;
+  type: "text" | "number" | "date" | "checkbox" | "select";
+  required: boolean;
+  options: string[] | null;
+  archived: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+type FormConfigWithFields = Record<string, unknown> & {
+  fields?: CustomFieldDto[];
+};
+
+async function loadClientFormConfig(
+  db: Database,
+  clientId: string,
+): Promise<FormConfigWithFields> {
+  const [row] = await db
+    .select({ formConfig: clients.formConfig })
+    .from(clients)
+    .where(eq(clients.id, clientId))
+    .limit(1);
+  if (!row) throw new ClientNotFoundError();
+  const config = (row.formConfig ?? {}) as FormConfigWithFields;
+  if (!Array.isArray(config.fields)) {
+    return { ...config, fields: [] };
+  }
+  return config;
+}
+
+async function saveClientFormConfig(
+  db: Database,
+  clientId: string,
+  nextConfig: FormConfigWithFields,
+) {
+  await db
+    .update(clients)
+    .set({ formConfig: nextConfig as typeof clients.$inferInsert.formConfig })
+    .where(eq(clients.id, clientId));
+}
+
+export async function createFormConfigField(
+  db: Database,
+  tenantId: string,
+  actorId: string,
+  clientId: string,
+  input: {
+    key: string;
+    label: string;
+    type: CustomFieldDto["type"];
+    required?: boolean;
+    options?: string[] | null;
+  },
+): Promise<CustomFieldDto> {
+  const config = await loadClientFormConfig(db, clientId);
+  const existing = config.fields ?? [];
+  if (existing.some((f) => f.key === input.key)) {
+    throw new FormConfigFieldDuplicateKeyError(input.key);
+  }
+  const nowIso = new Date().toISOString();
+  const field: CustomFieldDto = {
+    key: input.key,
+    label: input.label,
+    type: input.type,
+    required: input.required ?? false,
+    options: input.type === "select" ? input.options ?? [] : null,
+    archived: false,
+    createdAt: nowIso,
+    updatedAt: nowIso,
+  };
+  const nextConfig: FormConfigWithFields = {
+    ...config,
+    fields: [...existing, field],
+  };
+  await saveClientFormConfig(db, clientId, nextConfig);
+  await createAuditEvent(
+    db,
+    tenantId,
+    actorId,
+    "create",
+    "client_form_config_field",
+    clientId,
+    null,
+    { clientId, field },
+  );
+  return field;
+}
+
+export async function patchFormConfigField(
+  db: Database,
+  tenantId: string,
+  actorId: string,
+  clientId: string,
+  key: string,
+  input: {
+    label?: string;
+    required?: boolean;
+    options?: string[] | null;
+    archived?: boolean;
+    key?: unknown;
+    type?: unknown;
+  },
+): Promise<CustomFieldDto> {
+  if ("key" in input && input.key !== undefined) {
+    throw new FormConfigFieldImmutableError("key");
+  }
+  if ("type" in input && input.type !== undefined) {
+    throw new FormConfigFieldImmutableError("type");
+  }
+  const config = await loadClientFormConfig(db, clientId);
+  const existing = config.fields ?? [];
+  const idx = existing.findIndex((f) => f.key === key);
+  if (idx === -1) {
+    throw new FormConfigFieldNotFoundError();
+  }
+  const prev = existing[idx];
+  const next: CustomFieldDto = {
+    ...prev,
+    label: input.label ?? prev.label,
+    required: input.required ?? prev.required,
+    options:
+      input.options !== undefined
+        ? prev.type === "select"
+          ? input.options ?? []
+          : null
+        : prev.options,
+    archived: input.archived ?? prev.archived,
+    updatedAt: new Date().toISOString(),
+  };
+  const nextFields = [...existing];
+  nextFields[idx] = next;
+  const nextConfig: FormConfigWithFields = {
+    ...config,
+    fields: nextFields,
+  };
+  await saveClientFormConfig(db, clientId, nextConfig);
+  const action = next.archived && !prev.archived
+    ? "archive"
+    : !next.archived && prev.archived
+      ? "unarchive"
+      : "update";
+  await createAuditEvent(
+    db,
+    tenantId,
+    actorId,
+    action,
+    "client_form_config_field",
+    clientId,
+    { clientId, field: prev },
+    { clientId, field: next },
+  );
+  return next;
 }
 
 // -- Contacts --
