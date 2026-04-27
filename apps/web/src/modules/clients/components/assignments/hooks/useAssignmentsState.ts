@@ -30,6 +30,19 @@ function snapshotFromAssignments(
   return { aes, recruiters };
 }
 
+// Structural signature derived only from the fields this hook reads. Used as
+// a stable memo/effect dependency so a parent that re-creates the array each
+// render (e.g. inline literals) does not trigger an infinite re-seed loop.
+function snapshotSignature(
+  assignments: IClientAssignmentDto[] | undefined,
+): string {
+  if (!assignments || assignments.length === 0) return "";
+  return assignments
+    .map((a) => `${a.userId}:${a.userRole}:${a.accountExecutiveId ?? ""}`)
+    .sort()
+    .join("|");
+}
+
 function snapshotsEqual(a: AssignmentsSnapshot, b: AssignmentsSnapshot) {
   if (a.aes.size !== b.aes.size) return false;
   for (const id of a.aes) if (!b.aes.has(id)) return false;
@@ -64,16 +77,23 @@ export interface UseAssignmentsStateReturn {
 export function useAssignmentsState(
   assignments: IClientAssignmentDto[] | undefined,
 ): UseAssignmentsStateReturn {
+  const signature = snapshotSignature(assignments);
+
+  // Memoize on the structural signature, not on the array reference, so that
+  // callers passing fresh arrays with identical content do not invalidate the
+  // memo and trigger the re-seed effect on every render.
   const pristine = useMemo(
     () => snapshotFromAssignments(assignments),
-    [assignments],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [signature],
   );
 
   const [staged, setStaged] = useState<AssignmentsSnapshot>(() =>
     cloneSnapshot(pristine),
   );
 
-  // Re-seed local state whenever the server-side snapshot identity changes.
+  // Re-seed local state only when the server-side content actually changes;
+  // `pristine` ref is now stable across content-equivalent renders.
   useEffect(() => {
     setStaged(cloneSnapshot(pristine));
   }, [pristine]);

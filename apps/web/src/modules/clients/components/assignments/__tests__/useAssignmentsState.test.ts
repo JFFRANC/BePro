@@ -26,33 +26,35 @@ function mkAssignment(
 
 describe("useAssignmentsState", () => {
   it("seeds pristine from server assignments split by role", () => {
-    const { result } = renderHook(() =>
-      useAssignmentsState([
-        mkAssignment(AE1, "account_executive"),
-        mkAssignment(REC1, "recruiter", AE1),
-      ]),
-    );
+    const initial: IClientAssignmentDto[] = [
+      mkAssignment(AE1, "account_executive"),
+      mkAssignment(REC1, "recruiter", AE1),
+    ];
+    const { result } = renderHook(() => useAssignmentsState(initial));
     expect(result.current.assignedAEs.has(AE1)).toBe(true);
     expect(result.current.recruiters.get(REC1)).toBe(AE1);
     expect(result.current.isDirty).toBe(false);
   });
 
   it("stageAE flips isDirty and appears in batch payload", () => {
-    const { result } = renderHook(() => useAssignmentsState([]));
+    const initial: IClientAssignmentDto[] = [];
+    const { result } = renderHook(() => useAssignmentsState(initial));
     act(() => result.current.stageAE(AE1));
     expect(result.current.isDirty).toBe(true);
     expect(result.current.toBatchPayload().accountExecutives).toContain(AE1);
   });
 
   it("stageRecruiter without leader serializes without accountExecutiveId key", () => {
-    const { result } = renderHook(() => useAssignmentsState([]));
+    const initial: IClientAssignmentDto[] = [];
+    const { result } = renderHook(() => useAssignmentsState(initial));
     act(() => result.current.stageRecruiter(REC1));
     const payload = result.current.toBatchPayload();
     expect(payload.recruiters).toEqual([{ userId: REC1 }]);
   });
 
   it("stageRecruiter with setLeader serializes accountExecutiveId", () => {
-    const { result } = renderHook(() => useAssignmentsState([]));
+    const initial: IClientAssignmentDto[] = [];
+    const { result } = renderHook(() => useAssignmentsState(initial));
     act(() => {
       result.current.stageAE(AE1);
       result.current.stageRecruiter(REC1);
@@ -65,12 +67,11 @@ describe("useAssignmentsState", () => {
   });
 
   it("unstage AE reports orphaned recruiters and nulls their leader locally", () => {
-    const { result } = renderHook(() =>
-      useAssignmentsState([
-        mkAssignment(AE1, "account_executive"),
-        mkAssignment(REC1, "recruiter", AE1),
-      ]),
-    );
+    const initial: IClientAssignmentDto[] = [
+      mkAssignment(AE1, "account_executive"),
+      mkAssignment(REC1, "recruiter", AE1),
+    ];
+    const { result } = renderHook(() => useAssignmentsState(initial));
     let outcome: { orphanedRecruiters: string[] } = { orphanedRecruiters: [] };
     act(() => {
       outcome = result.current.unstage(AE1);
@@ -81,9 +82,10 @@ describe("useAssignmentsState", () => {
   });
 
   it("reset reverts all staged changes to the pristine server state", () => {
-    const { result } = renderHook(() =>
-      useAssignmentsState([mkAssignment(AE1, "account_executive")]),
-    );
+    const initial: IClientAssignmentDto[] = [
+      mkAssignment(AE1, "account_executive"),
+    ];
+    const { result } = renderHook(() => useAssignmentsState(initial));
     act(() => {
       result.current.stageAE(AE2);
       result.current.stageRecruiter(REC2, AE1);
@@ -96,13 +98,53 @@ describe("useAssignmentsState", () => {
   });
 
   it("idempotent: re-setting leader to same value keeps isDirty false relative to pristine", () => {
-    const { result } = renderHook(() =>
-      useAssignmentsState([
-        mkAssignment(AE1, "account_executive"),
-        mkAssignment(REC1, "recruiter", AE1),
-      ]),
-    );
+    const initial: IClientAssignmentDto[] = [
+      mkAssignment(AE1, "account_executive"),
+      mkAssignment(REC1, "recruiter", AE1),
+    ];
+    const { result } = renderHook(() => useAssignmentsState(initial));
     act(() => result.current.setLeader(REC1, AE1));
     expect(result.current.isDirty).toBe(false);
+  });
+
+  // Regression: hook MUST tolerate parents that re-create the assignments
+  // array on every render without infinite re-render loops, and MUST preserve
+  // local edits across content-equivalent re-renders.
+  it("does not infinite-loop when a fresh array ref with identical content is passed", () => {
+    const { result, rerender } = renderHook(
+      ({ data }: { data: IClientAssignmentDto[] }) =>
+        useAssignmentsState(data),
+      {
+        initialProps: {
+          data: [mkAssignment(AE1, "account_executive")],
+        },
+      },
+    );
+    rerender({ data: [mkAssignment(AE1, "account_executive")] });
+    expect(result.current.assignedAEs.has(AE1)).toBe(true);
+    act(() => result.current.stageRecruiter(REC1));
+    rerender({ data: [mkAssignment(AE1, "account_executive")] });
+    expect(result.current.recruiters.has(REC1)).toBe(true);
+  });
+
+  it("re-seeds when server-side content actually changes", () => {
+    const { result, rerender } = renderHook(
+      ({ data }: { data: IClientAssignmentDto[] }) =>
+        useAssignmentsState(data),
+      {
+        initialProps: {
+          data: [mkAssignment(AE1, "account_executive")],
+        },
+      },
+    );
+    expect(result.current.assignedAEs.has(AE1)).toBe(true);
+    expect(result.current.assignedAEs.has(AE2)).toBe(false);
+    rerender({
+      data: [
+        mkAssignment(AE1, "account_executive"),
+        mkAssignment(AE2, "account_executive"),
+      ],
+    });
+    expect(result.current.assignedAEs.has(AE2)).toBe(true);
   });
 });
