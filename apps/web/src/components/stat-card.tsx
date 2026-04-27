@@ -85,19 +85,17 @@ export function StatCard({
   showTrendIcon,
 }: StatCardProps) {
   const displayValue = useCountUp(value);
+  // Feature 009 follow-up: delega hover-lift + press + focus al primitive
+  // Card via variant="accent" + interactive. `borderColor` ahora se pasa
+  // como accentColor del stripe (no duplicamos hover:* que la Card ya trae).
   return (
-    <Card
-      className={cn(
-        "shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border-t-[3px]",
-        borderColor,
-      )}
-    >
+    <Card variant="accent" accentColor={borderColor} interactive>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardDescription>{label}</CardDescription>
           <div
             className={cn(
-              "size-8 rounded-lg flex items-center justify-center",
+              "size-8 rounded-lg flex items-center justify-center transition-transform duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/card:scale-110 motion-reduce:group-hover/card:scale-100",
               iconBg,
             )}
           >

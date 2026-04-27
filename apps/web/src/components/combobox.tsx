@@ -1,6 +1,6 @@
 import * as React from "react";
-import { ChevronsUpDown } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { triggerBaseClasses } from "@/components/ui/select";
 import {
   Command,
   CommandEmpty,
@@ -15,6 +15,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+
+// Combobox modernizado (feature 009 follow-up).
+// - Usa triggerBaseClasses para alinear visualmente con SelectTrigger + DatePicker.
+// - CommandItem seleccionado muestra Check icon (antes era invisible cual opcion estaba activa).
 
 export interface ComboboxOption {
   value: string;
@@ -52,16 +56,20 @@ export function Combobox({
         role="combobox"
         aria-expanded={open}
         disabled={disabled}
-        className={cn(
-          buttonVariants({ variant: "outline" }),
-          "w-full justify-between font-normal",
-          className,
-        )}
+        className={cn(triggerBaseClasses, "font-normal", className)}
       >
-        <span className={cn(!selectedLabel && "text-muted-foreground")}>
+        <span
+          className={cn(
+            "flex-1 text-left truncate",
+            !selectedLabel && "text-muted-foreground",
+          )}
+        >
           {selectedLabel ?? placeholder}
         </span>
-        <ChevronsUpDown className="size-3.5 shrink-0 opacity-50" />
+        <ChevronsUpDown
+          className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 ease-out data-[state=open]:rotate-180 motion-reduce:transition-none"
+          aria-hidden="true"
+        />
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
         <Command>
@@ -69,18 +77,28 @@ export function Combobox({
           <CommandList>
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
-              {options.map((option) => (
-                <CommandItem
-                  key={option.value}
-                  value={option.label}
-                  onSelect={() => {
-                    onValueChange?.(option.value === value ? "" : option.value);
-                    setOpen(false);
-                  }}
-                >
-                  {option.label}
-                </CommandItem>
-              ))}
+              {options.map((option) => {
+                const isSelected = option.value === value;
+                return (
+                  <CommandItem
+                    key={option.value}
+                    value={option.label}
+                    onSelect={() => {
+                      onValueChange?.(isSelected ? "" : option.value);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 size-4 transition-opacity duration-150",
+                        isSelected ? "opacity-100" : "opacity-0",
+                      )}
+                      aria-hidden="true"
+                    />
+                    {option.label}
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           </CommandList>
         </Command>

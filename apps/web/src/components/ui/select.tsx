@@ -8,6 +8,21 @@ import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
 const Select = SelectPrimitive.Root
 
+// Shared trigger base class — usado por SelectTrigger, Combobox y DatePicker
+// para garantizar que los 3 se vean identicos en el mismo filter row.
+// Feature 009 follow-up.
+export const triggerBaseClasses = [
+  "flex w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-card pr-2 pl-3 text-sm whitespace-nowrap shadow-xs",
+  "transition-[box-shadow,border-color,background-color] duration-150 ease-out outline-none select-none",
+  "hover:border-input/80 hover:shadow-sm",
+  "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:shadow-sm",
+  "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-muted disabled:shadow-none",
+  "aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20",
+  "h-9",
+  "dark:bg-input/40 dark:hover:bg-input/60 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
+  "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+].join(" ")
+
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (
     <SelectPrimitive.Group

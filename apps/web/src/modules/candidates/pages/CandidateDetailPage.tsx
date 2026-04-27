@@ -120,7 +120,9 @@ export function CandidateDetailPage() {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
+        {/* Feature 009 follow-up: hero card con spotlight (variant=feature)
+            para dar enfasis visual a los datos principales del candidato. */}
+        <Card variant="feature" className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Datos del candidato</CardTitle>
           </CardHeader>

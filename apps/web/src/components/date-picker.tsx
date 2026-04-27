@@ -1,7 +1,7 @@
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Calendar as CalendarIcon } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
+import { triggerBaseClasses } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -9,6 +9,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+
+// DatePicker modernizado (feature 009 follow-up).
+// - Usa triggerBaseClasses para alinear visualmente con Select + Combobox.
 
 interface DatePickerProps {
   value?: Date;
@@ -30,14 +33,16 @@ export function DatePicker({
       <PopoverTrigger
         disabled={disabled}
         className={cn(
-          buttonVariants({ variant: "outline" }),
-          "w-full justify-start text-left font-normal",
+          triggerBaseClasses,
+          "justify-start font-normal",
           !value && "text-muted-foreground",
           className,
         )}
       >
-        <CalendarIcon className="mr-2 h-4 w-4" />
-        {value ? format(value, "PPP", { locale: es }) : placeholder}
+        <CalendarIcon className="mr-1 size-4 text-muted-foreground" aria-hidden="true" />
+        <span className="flex-1 text-left truncate">
+          {value ? format(value, "PPP", { locale: es }) : placeholder}
+        </span>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar

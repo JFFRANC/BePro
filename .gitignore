@@ -67,3 +67,6 @@ ADMIN_GENERAL/
 # .NET build artifacts
 src/backend/**/bin/
 src/backend/**/obj/
+
+# Git worktrees (feature 009 T086)
+.worktrees/
