@@ -6,6 +6,10 @@ export interface Bindings {
   DATABASE_URL: string;
   JWT_ACCESS_SECRET: string;
   FILES: R2Bucket;
+  PASSWORD_RESET_RATE: KVNamespace;
+  RESEND_API_KEY?: string;
+  RESEND_FROM_DOMAIN?: string;
+  APP_URL: string;
 }
 
 export interface Variables {

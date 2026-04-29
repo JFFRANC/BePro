@@ -1,6 +1,11 @@
 export { tenants } from "./tenants.js";
 export { users } from "./users.js";
 export { refreshTokens } from "./refresh-tokens.js";
+export {
+  passwordResetTokens,
+  type PasswordResetTokenRow,
+  type PasswordResetTokenInsert,
+} from "./password-reset-tokens.js";
 export { auditEvents } from "./audit-events.js";
 export { clients } from "./clients.js";
 export { clientAssignments } from "./client-assignments.js";
