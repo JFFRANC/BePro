@@ -1,5 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Link } from "react-router-dom";
 import { loginSchema, type LoginFormValues } from "@bepro/shared";
 import { useAuth } from "../hooks/useAuth";
 import { useState } from "react";
@@ -92,6 +93,12 @@ export function LoginForm() {
         {errors.password && (
           <p className="text-sm text-red-500 mt-1">{errors.password.message}</p>
         )}
+        <Link
+          to="/forgot-password"
+          className="mt-2 inline-block text-sm text-primary hover:underline"
+        >
+          ¿Olvidaste tu contraseña?
+        </Link>
       </div>
 
       {error && (

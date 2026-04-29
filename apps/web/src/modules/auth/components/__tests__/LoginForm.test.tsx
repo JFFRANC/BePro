@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { BrowserRouter } from "react-router-dom";
 import { LoginForm } from "../LoginForm";
 
 const loginMock = vi.fn();
@@ -32,7 +33,11 @@ describe("LoginForm — tenant field visibility (US8)", () => {
     vi.resetModules();
     const { LoginForm: FreshForm } = await import("../LoginForm");
 
-    render(<FreshForm />);
+    render(
+      <BrowserRouter>
+        <FreshForm />
+      </BrowserRouter>,
+    );
 
     expect(screen.queryByLabelText(/Organización/i)).toBeNull();
 
@@ -62,7 +67,11 @@ describe("LoginForm — tenant field visibility (US8)", () => {
     vi.resetModules();
     const { LoginForm: FreshForm } = await import("../LoginForm");
 
-    render(<FreshForm />);
+    render(
+      <BrowserRouter>
+        <FreshForm />
+      </BrowserRouter>,
+    );
 
     expect(screen.getByLabelText(/Organización/i)).toBeTruthy();
   });

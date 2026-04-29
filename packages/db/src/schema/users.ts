@@ -37,7 +37,7 @@ export const users = pgTable(
       .defaultNow(),
   },
   (table) => [
-    unique("users_tenant_email_uq").on(table.tenantId, table.email),
+    unique("users_email_uq").on(table.email),
     index("users_tenant_id_idx").on(table.tenantId),
   ],
 );

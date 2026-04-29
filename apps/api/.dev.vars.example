@@ -1,0 +1,19 @@
+# Local Wrangler dev secrets — copy this file to `.dev.vars` and fill in real
+# values. `.dev.vars` is gitignored. In production, run `wrangler secret put`.
+
+# Required by every module
+DATABASE_URL=postgresql://user:pass@host/db
+JWT_ACCESS_SECRET=change-me
+
+# Required by feature 009 (password reset)
+APP_URL=http://localhost:5173
+
+# Optional in dev — when RESEND_API_KEY is unset, the Worker uses the
+# SuppressedEmailService that logs `email.suppressed` events to the Wrangler
+# tail (with the would-be reset URL) instead of sending real mail. This is the
+# expected dev-loop behavior (FR-018). Uncomment + fill in to send real mail.
+# RESEND_API_KEY=re_xxx
+# RESEND_FROM_DOMAIN=no-reply@bepro.example
+
+# Used by RLS integration tests (see packages/db/CLAUDE.md "Roles")
+DATABASE_URL_WORKER=postgresql://app_worker:pass@host/db

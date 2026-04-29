@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
 import { LoginForm } from "../components/LoginForm";
@@ -32,6 +32,10 @@ describe("LoginForm", () => {
     localStorage.clear();
   });
 
+  afterEach(() => {
+    cleanup();
+  });
+
   it("renders email, password, and tenant slug fields", () => {
     renderWithProviders(<LoginForm />);
 
@@ -45,5 +49,17 @@ describe("LoginForm", () => {
 
     const buttons = screen.getAllByRole("button", { name: /iniciar sesión/i });
     expect(buttons.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders the ¿Olvidaste tu contraseña? link to /forgot-password", () => {
+    renderWithProviders(<LoginForm />);
+
+    const link = screen.getByRole("link", {
+      name: /¿olvidaste tu contraseña\?/i,
+    });
+    expect(link).toBeDefined();
+    expect((link as HTMLAnchorElement).getAttribute("href")).toBe(
+      "/forgot-password",
+    );
   });
 });
