@@ -34,8 +34,15 @@ function PopoverContent({
       >
         <PopoverPrimitive.Popup
           data-slot="popover-content"
+          // Feature 009: surface elevada (border + shadow-lg), enter 120ms
+          // ease-out con slide corto desde el lado disparador; exit 100ms
+          // ease-in (30% mas rapido). Reduced-motion colapsa slide/zoom.
           className={cn(
-            "z-50 flex w-72 origin-(--transform-origin) flex-col gap-2.5 rounded-lg bg-popover p-2.5 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-hidden duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            "z-50 flex w-72 origin-(--transform-origin) flex-col gap-2.5 rounded-lg bg-popover p-3 text-sm text-popover-foreground border border-border shadow-lg outline-hidden",
+            "data-[side=bottom]:slide-in-from-top-1 data-[side=inline-end]:slide-in-from-left-1 data-[side=inline-start]:slide-in-from-right-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1",
+            "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-open:duration-[120ms] data-open:ease-out",
+            "data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 data-closed:duration-100 data-closed:ease-in",
+            "motion-reduce:zoom-in-100 motion-reduce:data-closed:zoom-out-100",
             className
           )}
           {...props}

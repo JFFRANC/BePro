@@ -63,3 +63,6 @@ ADMIN_GENERAL/
 
 # Screenshots (temp)
 *.png
+
+# Git worktrees (feature 009 T086)
+.worktrees/

@@ -9,7 +9,10 @@ const rawCss = readFileSync(
 );
 
 describe("US1 — Brand Identity & Color Tokens", () => {
-  it("T011: --primary resolves to a teal-green OKLch value (not grayscale)", () => {
+  it("T011: --primary resolves to a blueish OKLch value (feature 009 identity)", () => {
+    // Feature 003 defined la identidad como teal (H:150-200). Feature 009
+    // cambia intencionalmente la identidad a azul (H:210-240). Este test
+    // valida la nueva verdad del producto.
     const rootBlock = rawCss.match(/:root\s*\{([^}]+)\}/s);
     expect(rootBlock).not.toBeNull();
     const primaryMatch = rootBlock![1].match(
@@ -19,8 +22,8 @@ describe("US1 — Brand Identity & Color Tokens", () => {
     const parsed = parseOklch(primaryMatch![1]);
     expect(parsed).not.toBeNull();
     expect(parsed!.c).toBeGreaterThan(0);
-    expect(parsed!.h).toBeGreaterThanOrEqual(150);
-    expect(parsed!.h).toBeLessThanOrEqual(200);
+    expect(parsed!.h).toBeGreaterThanOrEqual(210);
+    expect(parsed!.h).toBeLessThanOrEqual(240);
   });
 
   it("T012: all semantic tokens have non-zero chroma in both :root and .dark", () => {
@@ -160,12 +163,15 @@ describe("US1 — Brand Identity & Color Tokens", () => {
 });
 
 describe("US2 — Typography System", () => {
-  it("T019: --font-heading contains Fraunces and --font-sans contains Source Sans 3", () => {
+  it("T019: --font-heading is a modern sans (feature 009) and --font-sans contains Source Sans 3", () => {
+    // Feature 003 pinned --font-heading a 'Fraunces' (serif). Feature 009
+    // intencionalmente cambia la identidad tipografica a un sans moderno
+    // ('Plus Jakarta Sans'). Este test valida la nueva verdad del producto.
     const rootBlock = rawCss.match(/:root\s*\{([^}]+)\}/s)![1];
 
     const headingMatch = rootBlock.match(/--font-heading:\s*([^;]+);/);
     expect(headingMatch).not.toBeNull();
-    expect(headingMatch![1]).toContain("Fraunces");
+    expect(headingMatch![1]).toContain("Plus Jakarta Sans");
 
     const sansMatch = rootBlock.match(/--font-sans:\s*([^;]+);/);
     expect(sansMatch).not.toBeNull();

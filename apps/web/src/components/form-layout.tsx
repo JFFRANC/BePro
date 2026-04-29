@@ -1,8 +1,9 @@
-import type { ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
+import { Children, cloneElement, isValidElement, type ReactNode } from "react";
+import { AlertCircle, type LucideIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 interface FormLayoutProps {
   title: string;
@@ -24,7 +25,7 @@ export function FormLayout({ title, description, children, className }: FormLayo
 }
 
 interface FormSectionProps {
-  title: string;
+  title: ReactNode;
   children: ReactNode;
 }
 
@@ -46,17 +47,80 @@ interface FormFieldProps {
   icon?: LucideIcon;
   children: ReactNode;
   htmlFor?: string;
+  /** Feature 009 follow-up: marca el campo como obligatorio.
+   *  - Muestra asterisco rojo en el label.
+   *  - Inyecta aria-required="true" en el unico child (si es elemento).
+   *  - Si hay error, inyecta aria-invalid="true" + aria-describedby al <p role="alert">. */
+  required?: boolean;
+  /** Opcional: muestra texto de ayuda persistente debajo del input. */
+  hint?: string;
 }
 
-export function FormField({ label, error, icon: Icon, children, htmlFor }: FormFieldProps) {
+export function FormField({
+  label,
+  error,
+  icon: Icon,
+  children,
+  htmlFor,
+  required,
+  hint,
+}: FormFieldProps) {
+  const errorId = error && htmlFor ? `${htmlFor}-error` : undefined;
+  const hintId = hint && htmlFor ? `${htmlFor}-hint` : undefined;
+  const describedBy =
+    [errorId, hintId].filter(Boolean).join(" ") || undefined;
+
+  // Inyecta aria-required / aria-invalid / aria-describedby en el child
+  // (cuando es un elemento React solo).
+  const arrayChildren = Children.toArray(children);
+  const enhanced = arrayChildren.map((child, idx) => {
+    if (!isValidElement(child)) return child;
+    if (idx !== 0) return child;
+    return cloneElement(child as React.ReactElement<Record<string, unknown>>, {
+      "aria-required": required || undefined,
+      "aria-invalid": error ? "true" : undefined,
+      "aria-describedby": describedBy,
+    });
+  });
+
   return (
     <div className="space-y-2">
       <Label htmlFor={htmlFor} className="flex items-center gap-2">
         {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
-        {label}
+        <span>
+          {label}
+          {required && (
+            <span
+              aria-hidden="true"
+              className="ml-1 text-destructive"
+            >
+              *
+            </span>
+          )}
+        </span>
       </Label>
-      {children}
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {enhanced}
+      {hint && !error && (
+        <p
+          id={hintId}
+          className="text-xs text-muted-foreground"
+        >
+          {hint}
+        </p>
+      )}
+      {error && (
+        <p
+          id={errorId}
+          role="alert"
+          className={cn(
+            "flex items-center gap-1.5 text-sm text-destructive",
+            "animate-in fade-in-0 slide-in-from-top-1 duration-150",
+          )}
+        >
+          <AlertCircle className="size-3.5 shrink-0" aria-hidden="true" />
+          {error}
+        </p>
+      )}
     </div>
   );
 }

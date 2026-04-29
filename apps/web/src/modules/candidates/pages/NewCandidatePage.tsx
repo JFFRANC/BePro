@@ -1,15 +1,17 @@
-// 007-candidates-module — página de registro de candidato (US1 + UI/UX polish).
-import { useMemo, useState } from "react";
+// 007-candidates-module — pagina de registro de candidato (US1 + UI/UX polish).
+// Feature 009 follow-up: collapsado a un solo FormLayout con FormSection por grupo,
+// en lugar de 4 Cards hermanas. Mantiene handler + CandidateForm id intactos.
+import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useClients } from "@/modules/clients/hooks/useClients";
 import { Combobox } from "@/components/combobox";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft } from "lucide-react";
+import { FormLayout, FormSection } from "@/components/form-layout";
 
 import {
   CandidateForm,
@@ -55,7 +57,7 @@ export function NewCandidatePage() {
 
   const createCandidate = useCreateCandidate({
     onCreated: async (cand) => {
-      // Si hay un adjunto pendiente, lo subimos ahora (post-creación).
+      // Si hay un adjunto pendiente, lo subimos ahora (post-creacion).
       if (attachment) {
         setUploading(true);
         try {
@@ -71,7 +73,7 @@ export function NewCandidatePage() {
           );
         } catch {
           toast.warning(
-            `Candidato registrado: ${cand.first_name} ${cand.last_name}, pero el CV no se pudo subir. Inténtalo desde su detalle.`,
+            `Candidato registrado: ${cand.first_name} ${cand.last_name}, pero el CV no se pudo subir. Intentalo desde su detalle.`,
           );
         } finally {
           setUploading(false);
@@ -94,6 +96,19 @@ export function NewCandidatePage() {
   const showDuplicateDialog = createCandidate.duplicates.length > 0;
   const isSubmitting = createCandidate.isPending || uploading;
 
+  // Label para secciones obligatorias: asterisco accesible + hint visual.
+  const requiredLabel = (title: string): ReactNode => (
+    <>
+      {title}
+      <span
+        aria-hidden="true"
+        className="ml-1 text-destructive"
+      >
+        *
+      </span>
+    </>
+  );
+
   return (
     <div className="page-container py-8 space-y-6">
       <Link
@@ -106,14 +121,14 @@ export function NewCandidatePage() {
 
       <PageHeader
         title="Registrar candidato"
-        description="Captura la información básica del candidato y los datos adicionales que requiera el cliente."
+        description="Captura la informacion basica del candidato y los datos adicionales que requiera el cliente."
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Cliente *</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <FormLayout
+        title="Nuevo candidato"
+        description="Los campos marcados con * son obligatorios."
+      >
+        <FormSection title={requiredLabel("Cliente")}>
           <Label htmlFor="client-picker" className="sr-only">
             Cliente
           </Label>
@@ -122,7 +137,7 @@ export function NewCandidatePage() {
             value={clientId || undefined}
             onValueChange={(v) => setClientId(v ?? "")}
             placeholder="Selecciona un cliente"
-            searchPlaceholder="Buscar cliente…"
+            searchPlaceholder="Buscar cliente..."
             emptyMessage="Sin coincidencias"
             disabled={clientsQuery.isLoading}
           />
@@ -132,29 +147,19 @@ export function NewCandidatePage() {
               cargar los campos correspondientes.
             </p>
           )}
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      {clientId ? (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Datos del candidato</CardTitle>
-            </CardHeader>
-            <CardContent>
+        {clientId ? (
+          <>
+            <FormSection title="Datos del candidato">
               <CandidateForm
                 clientId={clientId}
                 formConfig={formConfig}
                 onValidSubmit={handleValidSubmit}
               />
-            </CardContent>
-          </Card>
+            </FormSection>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">CV (opcional)</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <FormSection title="CV (opcional)">
               <AttachmentUploader
                 attachment={attachment}
                 onChange={setAttachment}
@@ -162,28 +167,28 @@ export function NewCandidatePage() {
                 error={attachmentError ?? undefined}
                 disabled={isSubmitting}
               />
-            </CardContent>
-          </Card>
+            </FormSection>
 
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate("/candidates")}
-              disabled={isSubmitting}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              form="candidate-form"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Registrando…" : "Registrar candidato"}
-            </Button>
-          </div>
-        </>
-      ) : null}
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate("/candidates")}
+                disabled={isSubmitting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                form="candidate-form"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Registrando..." : "Registrar candidato"}
+              </Button>
+            </div>
+          </>
+        ) : null}
+      </FormLayout>
 
       <DuplicateWarningDialog
         open={showDuplicateDialog}

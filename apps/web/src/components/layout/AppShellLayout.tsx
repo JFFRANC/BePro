@@ -3,6 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SkipToContent } from "./SkipToContent";
 import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
+import { PageTransition } from "@/components/motion/PageTransition";
 
 export function AppShellLayout() {
   return (
@@ -21,7 +22,9 @@ export function AppShellLayout() {
               data-slot="main-inner"
               className="mx-auto w-full max-w-screen-2xl px-4 py-6 md:px-6 lg:px-8"
             >
-              <Outlet />
+              <PageTransition>
+                <Outlet />
+              </PageTransition>
             </div>
           </main>
         </div>

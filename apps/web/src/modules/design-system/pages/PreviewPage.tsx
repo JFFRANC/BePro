@@ -117,6 +117,17 @@ import { SectionShell } from "@/components/section-shell";
 import { SectionHeader } from "@/components/section-header";
 import { StatCard } from "@/components/stat-card";
 import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { CardGrid } from "@/components/motion/CardGrid";
+import { Sparkles, TrendingUp, Zap } from "lucide-react";
 
 /* ---------- Data ---------- */
 
@@ -780,6 +791,9 @@ export function PreviewPage() {
             ))}
           </div>
         </SectionShell>
+
+        {/* --- Card primitive showcase (feature 009 follow-up) --- */}
+        <CardPrimitiveShowcase />
 
         {/* --- Layout Patterns --- */}
         <SectionShell>
@@ -1685,5 +1699,262 @@ export function PreviewPage() {
         </footer>
       </main>
     </div>
+  );
+}
+
+/* ----------------------------- Card showcase ---------------------------- */
+
+// Feature 009 follow-up: muestra cada variant del primitive Card + el efecto
+// spotlight (feature) + el stagger del CardGrid. Replay button re-monta el
+// grid para re-disparar la entrada escalonada y que el usuario la vea en
+// vivo.
+function CardPrimitiveShowcase() {
+  const [replayKey, setReplayKey] = useState(0);
+
+  return (
+    <SectionShell>
+      <SectionHeader
+        title="Card primitive"
+        description="Variantes del componente Card: default, outline, ghost, feature (spotlight), accent (stripe). Hover cada uno para ver su motion."
+      />
+
+      <div className="space-y-8">
+        {/* Variants side-by-side */}
+        <div>
+          <h4 className="!text-xs !font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+            Variantes
+          </h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Default</CardTitle>
+                <CardDescription>
+                  Borde sutil y sombra discreta. Uso general en formularios y
+                  paneles.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card variant="outline">
+              <CardHeader>
+                <CardTitle>Outline</CardTitle>
+                <CardDescription>
+                  Borde fuerte, sin sombra. Ideal para listas de opciones o
+                  tiles planos.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card variant="ghost">
+              <CardHeader>
+                <CardTitle>Ghost</CardTitle>
+                <CardDescription>
+                  Sin borde, fondo tinted. Para secciones anidadas que
+                  necesitan separacion sutil.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card variant="feature">
+              <CardHeader>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="size-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                    <Sparkles className="size-4" />
+                  </div>
+                  <Badge variant="outline">Hero</Badge>
+                </div>
+                <CardTitle className="mt-2">Feature</CardTitle>
+                <CardDescription>
+                  Gradient sutil + spotlight que sigue el cursor. Para tarjetas
+                  hero o anuncios destacados.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card variant="accent" accentColor="border-t-success">
+              <CardHeader>
+                <CardTitle>Accent</CardTitle>
+                <CardDescription>
+                  Stripe superior. El color es opt-in
+                  (accentColor="border-t-success" aqui).
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        </div>
+
+        {/* Interactive variants — hover para ver lift + press + focus */}
+        <div>
+          <h4 className="!text-xs !font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+            Interactivas (hover + click + Tab para focus)
+          </h4>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Card interactive>
+              <CardHeader>
+                <CardTitle>Default + interactive</CardTitle>
+                <CardDescription>
+                  Hover: lift -0.5px + shadow-lg. Press: scale 0.99. Focus
+                  visible con ring accesible.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            <Card variant="feature" interactive>
+              <CardHeader>
+                <div className="size-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                  <Zap className="size-4" />
+                </div>
+                <CardTitle className="mt-2">Feature + interactive</CardTitle>
+                <CardDescription>
+                  Lift + spotlight + press scale. El efecto mas llamativo del
+                  sistema.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            <Card variant="accent" accentColor="border-t-warning" interactive>
+              <CardHeader>
+                <CardTitle>Accent + interactive</CardTitle>
+                <CardDescription>
+                  Stripe semantico (warning aqui) + lift. KPI cards clickeables
+                  lo usan.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        </div>
+
+        {/* CardGrid stagger — replay */}
+        <div>
+          <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+            <h4 className="!text-xs !font-semibold text-muted-foreground uppercase tracking-wider">
+              CardGrid — stagger de entrada
+            </h4>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setReplayKey((k) => k + 1)}
+            >
+              Replay animation
+            </Button>
+          </div>
+          <CardGrid
+            key={replayKey}
+            className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+          >
+            <Card variant="accent" accentColor="border-t-primary" interactive size="sm">
+              <CardHeader>
+                <CardDescription className="text-xs uppercase tracking-wide">
+                  Mostrando
+                </CardDescription>
+                <CardTitle className="!text-3xl font-bold font-heading tabular-nums">
+                  124
+                </CardTitle>
+              </CardHeader>
+            </Card>
+            <Card variant="accent" accentColor="border-t-success" interactive size="sm">
+              <CardHeader>
+                <CardDescription className="text-xs uppercase tracking-wide">
+                  Activos
+                </CardDescription>
+                <CardTitle className="!text-3xl font-bold font-heading tabular-nums">
+                  98
+                </CardTitle>
+              </CardHeader>
+            </Card>
+            <Card variant="accent" accentColor="border-t-warning" interactive size="sm">
+              <CardHeader>
+                <CardDescription className="text-xs uppercase tracking-wide">
+                  En proceso
+                </CardDescription>
+                <CardTitle className="!text-3xl font-bold font-heading tabular-nums">
+                  42
+                </CardTitle>
+              </CardHeader>
+            </Card>
+            <Card variant="accent" accentColor="border-t-info" interactive size="sm">
+              <CardHeader>
+                <CardDescription className="text-xs uppercase tracking-wide">
+                  Contratados
+                </CardDescription>
+                <CardTitle className="!text-3xl font-bold font-heading tabular-nums">
+                  17
+                </CardTitle>
+              </CardHeader>
+            </Card>
+          </CardGrid>
+        </div>
+
+        {/* Slots completos — con footer */}
+        <div>
+          <h4 className="!text-xs !font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+            Slots completos (Header + Title + Description + Action + Content + Footer)
+          </h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <div className="size-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                  <Users className="size-5" />
+                </div>
+                <CardTitle>Maria Lopez</CardTitle>
+                <CardDescription>
+                  Candidata registrada el 24 de abril. En proceso de
+                  evaluacion para el puesto de Lider de Turno.
+                </CardDescription>
+                <CardAction>
+                  <Badge variant="outline">Nuevo</Badge>
+                </CardAction>
+              </CardHeader>
+              <CardContent>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p>
+                    <span className="font-medium text-foreground">
+                      Telefono:
+                    </span>{" "}
+                    55 1234 5678
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">
+                      Cliente:
+                    </span>{" "}
+                    OXXO
+                  </p>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button size="sm" variant="outline">
+                  Ver detalles
+                </Button>
+              </CardFooter>
+            </Card>
+
+            <Card variant="feature" interactive>
+              <CardHeader>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="size-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                    <TrendingUp className="size-5" />
+                  </div>
+                  <Badge className="bg-primary/10 text-primary hover:bg-primary/15">
+                    Destacado
+                  </Badge>
+                </div>
+                <CardTitle className="mt-2">Tasa de contratacion</CardTitle>
+                <CardDescription>
+                  Este mes mejoraste un 12% tus contrataciones vs mes anterior.
+                  Hover aqui y mueve el cursor para ver el spotlight.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="font-heading text-4xl font-bold tabular-nums">
+                  87%
+                </p>
+                <p className="text-xs text-success mt-1">
+                  <TrendingUp className="inline size-3 mr-1" />
+                  +12% vs mes anterior
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </SectionShell>
   );
 }

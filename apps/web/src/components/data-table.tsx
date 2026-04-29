@@ -1,4 +1,9 @@
-import { useState } from "react";
+import {
+  Fragment,
+  useState,
+  type ComponentType,
+  type ReactNode,
+} from "react";
 import {
   type ColumnDef,
   type Column,
@@ -19,18 +24,89 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+
+export interface DataTableRowWrapperProps {
+  children: ReactNode;
+  index: number;
+}
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   pageSize?: number;
+  /** Feature 009 — estados opcionales (backwards compatible, FR-010). */
+  isLoading?: boolean;
+  error?: unknown;
+  emptyState?: ReactNode;
+  errorState?: ReactNode;
+  loadingSkeletonRows?: number;
+  /** Permite envolver cada fila de datos para orquestar motion/entrance. */
+  rowWrapper?: ComponentType<DataTableRowWrapperProps>;
+}
+
+const DEFAULT_SKELETON_ROWS = 5;
+
+function DefaultEmptyCell({ colSpan }: { colSpan: number }) {
+  return (
+    <TableRow>
+      <TableCell
+        colSpan={colSpan}
+        className="h-24 text-center text-muted-foreground"
+      >
+        No hay resultados.
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function DefaultErrorCell({ colSpan }: { colSpan: number }) {
+  return (
+    <TableRow>
+      <TableCell
+        colSpan={colSpan}
+        role="alert"
+        className="h-24 text-center text-destructive"
+      >
+        No pudimos cargar los datos. Intenta de nuevo en unos segundos.
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function SkeletonRows({
+  rows,
+  colSpan,
+}: {
+  rows: number;
+  colSpan: number;
+}) {
+  return (
+    <>
+      {Array.from({ length: rows }).map((_, rowIdx) => (
+        <TableRow key={`skeleton-${rowIdx}`}>
+          {Array.from({ length: colSpan }).map((_, colIdx) => (
+            <TableCell key={`skeleton-${rowIdx}-${colIdx}`}>
+              <Skeleton className="h-4 w-full" />
+            </TableCell>
+          ))}
+        </TableRow>
+      ))}
+    </>
+  );
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   pageSize = 10,
+  isLoading = false,
+  error,
+  emptyState,
+  errorState,
+  loadingSkeletonRows = DEFAULT_SKELETON_ROWS,
+  rowWrapper,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
 
@@ -47,62 +123,110 @@ export function DataTable<TData, TValue>({
     },
   });
 
+  // Feature 009: stagger de filas en mount. Primeras 10 filas en cascada (40ms
+  // cada una); a partir de la 11 sin delay (aparicion simultanea al final del
+  // stagger). motion-reduce:animate-none cancela todo.
+  const rows = table.getRowModel().rows;
+
+  // Precedencia de estados: error > loading (sin data) > empty > data.
+  const showError = Boolean(error);
+  const showLoading = !showError && isLoading && rows.length === 0;
+  const showEmpty = !showError && !showLoading && rows.length === 0;
+
+  const RowWrapper = rowWrapper ?? null;
+
   return (
     <div>
-      <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.length > 0 ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
+      {/* Table ya trae rounded-xl border shadow-sm desde components/ui/table.tsx */}
+      <Table>
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => (
+                <TableHead key={header.id}>
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
                       )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+                </TableHead>
+              ))}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {showError ? (
+            errorState !== undefined ? (
+              <TableRow>
+                <TableCell colSpan={columns.length}>{errorState}</TableCell>
+              </TableRow>
             ) : (
+              <DefaultErrorCell colSpan={columns.length} />
+            )
+          ) : showLoading ? (
+            <SkeletonRows
+              rows={loadingSkeletonRows}
+              colSpan={columns.length}
+            />
+          ) : showEmpty ? (
+            emptyState !== undefined ? (
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
                   className="h-24 text-center text-muted-foreground"
                 >
-                  No hay resultados.
+                  {emptyState}
                 </TableCell>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+            ) : (
+              <DefaultEmptyCell colSpan={columns.length} />
+            )
+          ) : (
+            rows.map((row, index) => {
+              const delayMs = index < 10 ? index * 40 : 400;
+              const cells = row.getVisibleCells().map((cell) => (
+                <TableCell key={cell.id}>
+                  {flexRender(
+                    cell.column.columnDef.cell,
+                    cell.getContext(),
+                  )}
+                </TableCell>
+              ));
 
-      <div className="flex items-center justify-between px-2 py-4">
-        <p className="text-sm text-muted-foreground">
-          {table.getFilteredRowModel().rows.length} rows
+              if (RowWrapper) {
+                return (
+                  <RowWrapper key={row.id} index={index}>
+                    {cells}
+                  </RowWrapper>
+                );
+              }
+
+              return (
+                <TableRow
+                  key={row.id}
+                  className="animate-in fade-in-0 slide-in-from-top-1 duration-[180ms] ease-out motion-reduce:animate-none motion-reduce:slide-in-from-top-0"
+                  style={{
+                    animationDelay: `${delayMs}ms`,
+                    animationFillMode: "both",
+                  }}
+                >
+                  {cells}
+                </TableRow>
+              );
+            })
+          )}
+        </TableBody>
+      </Table>
+
+      <div className="mt-4 flex items-center justify-between gap-3 px-1">
+        <p className="text-sm text-muted-foreground tabular-nums">
+          {table.getFilteredRowModel().rows.length} registros
         </p>
-        <div className="flex items-center gap-2">
-          <p className="text-sm text-muted-foreground">
-            Page {table.getState().pagination.pageIndex + 1} of{" "}
-            {table.getPageCount()}
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-muted-foreground tabular-nums">
+            Pagina {table.getState().pagination.pageIndex + 1} de{" "}
+            {table.getPageCount() || 1}
           </p>
           <Button
             variant="outline"
@@ -110,7 +234,7 @@ export function DataTable<TData, TValue>({
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
-            Previous
+            Anterior
           </Button>
           <Button
             variant="outline"
@@ -118,7 +242,7 @@ export function DataTable<TData, TValue>({
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
-            Next
+            Siguiente
           </Button>
         </div>
       </div>
@@ -161,3 +285,6 @@ export function DataTableColumnHeader<TData, TValue>({
     </Button>
   );
 }
+
+// Re-export for callers who want the "no wrapping" explicit signal.
+export { Fragment as DataTableRowFragment };
