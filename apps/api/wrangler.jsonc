@@ -1,16 +1,42 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "bepro-api",
-  "main": "src/index.ts",
-  "compatibility_date": "2025-04-01",
-  "compatibility_flags": ["nodejs_compat"],
-  "vars": {
-    "ENVIRONMENT": "development"
-  },
-  // Secrets (set in .dev.vars for local, `wrangler secret put` for production):
-  // JWT_ACCESS_SECRET — HS256 signing secret for access JWTs
-  // DATABASE_URL — Neon PostgreSQL connection string
-  "r2_buckets": [{ "binding": "FILES", "bucket_name": "bepro-files" }]
-  // Future bindings:
-  // "kv_namespaces": [{ "binding": "CACHE", "id": "..." }]
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "bepro-api",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-04-01",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"vars": {
+		"ENVIRONMENT": "development"
+	},
+	// Secrets (set in .dev.vars for local, `wrangler secret put` for production):
+	// JWT_ACCESS_SECRET — HS256 signing secret for access JWTs
+	// DATABASE_URL — Neon PostgreSQL connection string
+	// RESEND_API_KEY — (feature 009) optional; when unset the Worker uses the
+	//                  SuppressedEmailService that logs `email.suppressed` events
+	// RESEND_FROM_DOMAIN — (feature 009) verified Resend sender; required when
+	//                      RESEND_API_KEY is set
+	// APP_URL — (feature 009) public web origin used to build reset links
+	"r2_buckets": [
+		{
+			"binding": "FILES",
+			"bucket_name": "bepro-files"
+		}
+	],
+	// Per-email password-reset rate-limit (feature 009): replace <TODO_FROM_T001>
+	// with the id printed by `wrangler kv namespace create PASSWORD_RESET_RATE`.
+	"kv_namespaces": [
+		{
+			"binding": "PASSWORD_RESET_RATE",
+			"id": "b63bf476456a4a6aa655b6aa6123b5a7",
+			"preview_id": "366dfcde481341fd84617ed0a6ea77a3",
+		}
+	],
+	// Daily cleanup of used / expired password-reset tokens (feature 009 T057).
+	// 03:00 UTC ≈ 21:00–22:00 Mexico City — outside business hours.
+	"triggers": {
+		"crons": [
+			"0 3 * * *"
+		]
+	}
 }

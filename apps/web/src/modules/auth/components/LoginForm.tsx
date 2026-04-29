@@ -1,5 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Link } from "react-router-dom";
 import { loginSchema, type LoginFormValues } from "@bepro/shared";
 import { useAuth } from "../hooks/useAuth";
 import { useRef, useState } from "react";
@@ -188,6 +189,15 @@ export function LoginForm() {
             {...register("password")}
           />
         </FormField>
+      </motion.div>
+
+      <motion.div variants={fieldVariants} className="-mt-1 flex justify-end">
+        <Link
+          to="/forgot-password"
+          className="rounded-sm text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          ¿Olvidaste tu contraseña?
+        </Link>
       </motion.div>
 
       {error && (

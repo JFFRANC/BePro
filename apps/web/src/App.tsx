@@ -9,6 +9,8 @@ import { OfflineBanner } from "@/components/offline-banner";
 import { ConfirmDialogProvider } from "@/components/confirm-dialog";
 import { ErrorPage } from "@/components/error-page";
 import { LoginPage } from "@/modules/auth/pages/LoginPage";
+import { ForgotPasswordPage } from "@/modules/auth/pages/ForgotPasswordPage";
+import { ResetPasswordPage } from "@/modules/auth/pages/ResetPasswordPage";
 import { useAuth } from "@/modules/auth/hooks/useAuth";
 import { AbilityProvider } from "@/components/ability-provider";
 import { defineAbilityFor } from "@/lib/ability";
@@ -97,6 +99,8 @@ export function App() {
                   <OfflineBanner />
                   <Routes>
                     <Route path="/login" element={<LoginPage />} />
+                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                    <Route path="/reset-password" element={<ResetPasswordPage />} />
                     <Route path="/design-system" element={<PreviewPage />} />
                     <Route
                       path="/change-password"

@@ -72,3 +72,4 @@ Append-only tables (`audit_events`, `candidate_duplicate_links`, `retention_revi
 ## Tables Without RLS
 - `tenants` — Queried before tenant context is established (login)
 - `refresh_tokens` — Accessed by token_hash, ownership via user_id FK
+- `password_reset_tokens` — Pre-authentication artifact; no tenant context at issuance. Ownership enforced by user_id FK; isolation by the public endpoints exposing no tenant signal (feature 009 / ADR-009).
