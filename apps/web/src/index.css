@@ -359,6 +359,87 @@
   }
 }
 
+/* Aurora background blobs — derivas independientes para cada blob crean
+   un efecto de paralaje suave. Cada loop tiene amplitud y duracion distintas
+   para evitar sincronizacion (que se sentiria mecanica). */
+@keyframes aurora-drift-1 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33% { transform: translate3d(60px, -42px, 0) scale(1.08); }
+  66% { transform: translate3d(-32px, 56px, 0) scale(0.96); }
+}
+@keyframes aurora-drift-2 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-54px, 46px, 0) scale(1.12); }
+}
+@keyframes aurora-drift-3 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(0.94); }
+  40% { transform: translate3d(46px, -52px, 0) scale(1.08); }
+  80% { transform: translate3d(-22px, 30px, 0) scale(1); }
+}
+@keyframes aurora-drift-4 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(64px, 32px, 0) scale(0.90); }
+}
+
+/* Glow detrás de la card del login: respira con escala + opacidad. */
+@keyframes aurora-pulse {
+  0%, 100% { opacity: 0.45; transform: scale(0.96); }
+  50% { opacity: 0.85; transform: scale(1.04); }
+}
+
+/* Glow entrance: del centro pequeño hacia escala 0.96 (donde empieza el pulse). */
+@keyframes glow-enter {
+  0% { opacity: 0; transform: scale(0.6); }
+  100% { opacity: 0.45; transform: scale(0.96); }
+}
+
+/* Sheen sweep: una linea de luz diagonal atraviesa la card al cargar. */
+@keyframes sheen-sweep {
+  0% { transform: translateX(-110%) skewX(-12deg); opacity: 0; }
+  10% { opacity: 1; }
+  60% { opacity: 1; }
+  100% { transform: translateX(220%) skewX(-12deg); opacity: 0; }
+}
+
+/* Aurora layer fade-in al primer frame. */
+@keyframes aurora-fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* Brand title gradient shift — cicla la posicion del fondo lateralmente. */
+@keyframes brand-gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Card entrance — escala leve + fade desde abajo. */
+@keyframes card-in {
+  0% { opacity: 0; transform: translateY(10px) scale(0.985); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Fade + slide desde abajo para items individuales (titulo, subtitulo). */
+@keyframes fade-up {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Shake horizontal corto para validacion fallida del form. */
+@keyframes shake-x {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(7px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(4px); }
+}
+
+/* Clase imperativa: agregar/quitar para re-disparar el shake en errores
+   consecutivos. La regla global de prefers-reduced-motion la neutraliza. */
+.login-shake {
+  animation: shake-x 0.4s ease-in-out;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
