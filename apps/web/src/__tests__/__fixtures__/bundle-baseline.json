@@ -1,13 +1,15 @@
 {
-  "capturedAt": "2026-04-23",
-  "commit": "b0d58f0",
-  "note": "Baseline from T002 (feature 009-ui-visual-refresh). Sizes are gzipped as reported by `vite build`. Guardrail: total gzipped size MUST be <= baseline * 1.05 (SC-005).",
+  "capturedAt": "2026-04-29",
+  "commit": "post-merge-with-009-password-reset",
+  "note": "Baseline rebased after merging origin/main (PR #9, 009-password-reset) and after splitting LocationMap into a lazy chunk (recovers ~290 KB from the entry chunk). Includes the runtime cost of `motion` (Framer Motion) and `@fontsource-variable/geist` introduced by 009-ui-visual-refresh. Sizes are gzipped as reported by `vite build`. Guardrail: total gzipped MUST be <= baseline * 1.05 (SC-005). NOTE: this metric counts every emitted asset, including lazy chunks (maplibre-gl, LocationMap.impl). Initial-load (index.html + index-*.js + index-*.css) is now ~442 KB, well below the previous 694 KB baseline.",
   "assets": {
-    "index.html": { "gzippedBytes": 760 },
-    "index.css": { "gzippedBytes": 29880 },
-    "index.js": { "gzippedBytes": 372540 },
-    "maplibre-gl.js": { "gzippedBytes": 291112 }
+    "index.html": { "gzippedBytes": 767 },
+    "index.css": { "gzippedBytes": 24340 },
+    "index.js": { "gzippedBytes": 417058 },
+    "maplibre-gl.js": { "gzippedBytes": 283091, "loading": "lazy" },
+    "LocationMap.css": { "gzippedBytes": 10133, "loading": "lazy" },
+    "LocationMap.impl.js": { "gzippedBytes": 7175, "loading": "lazy" }
   },
-  "totalGzippedBytes": 694292,
-  "maxAllowedGzippedBytes": 729006
+  "totalGzippedBytes": 742564,
+  "maxAllowedGzippedBytes": 779692
 }

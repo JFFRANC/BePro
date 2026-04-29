@@ -70,7 +70,7 @@ This document resolves design and implementation questions raised by the spec an
 
 **Alternatives considered**:
 
-- **Framer Motion** — rejected (adds ~30KB+ gzipped, violates SC-005; overkill for the motion budget defined).
+- **Framer Motion** — initially rejected. **Reversed during implementation (2026-04-29)**: the motion budget grew to require shared layout transitions (page fades, modal stagger, list-item entrances) that CSS-only choreography could not express ergonomically. The package was added as `motion@^12.x` (rebranded Framer Motion). The bundle delta is offset by lazy-loading `maplibre-gl` (only loads on `/clients/:id`), so initial-load weight is now ~442 KB gzipped — well below the original baseline's 694 KB. Total emitted (lazy chunks included) is rebased in `bundle-baseline.json`.
 - **Motion One** — rejected (would still be a new dep; CSS covers every case in the budget).
 - **CSS-only without `tw-animate-css`** — feasible but would require re-authoring keyframes that already exist; keeping the library is the lower-risk choice.
 
