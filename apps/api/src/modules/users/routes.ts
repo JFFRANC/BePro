@@ -24,6 +24,7 @@ import {
   resetPassword,
   deactivateUser,
   reactivateUser,
+  ClientNotFoundError,
 } from "./service.js";
 
 export const usersRoutes = new Hono<HonoEnv>();
@@ -41,16 +42,25 @@ usersRoutes.post(
     const db = c.get("db");
     const body = c.req.valid("json");
 
-    const result = await createUser(db, tenantId, user.id, body);
+    try {
+      const result = await createUser(db, tenantId, user.id, body);
 
-    if (!result) {
-      return c.json(
-        { error: "El correo electrónico ya está registrado en esta organización" },
-        409,
-      );
+      if (!result) {
+        return c.json(
+          { error: "El correo electrónico ya está registrado en esta organización" },
+          409,
+        );
+      }
+
+      return c.json({ data: result }, 201);
+    } catch (err) {
+      // 010 — clientId inválido / inactivo / cross-tenant. Mensaje uniforme
+      // para no filtrar enumeration; HTTP 400 (FR-004).
+      if (err instanceof ClientNotFoundError) {
+        return c.json({ error: "cliente inactivo o inexistente" }, 400);
+      }
+      throw err;
     }
-
-    return c.json({ data: result }, 201);
   },
 );
 

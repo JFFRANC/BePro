@@ -4,7 +4,8 @@ import {
   createUserSchema,
   type CreateUserFormValues,
 } from "@bepro/shared";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/password-input";
 import { Button } from "@/components/ui/button";
@@ -18,9 +19,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCreateUser } from "../hooks/useUsers";
+import {
+  useActiveClients,
+  ACTIVE_CLIENTS_QUERY_KEY,
+} from "../hooks/useActiveClients";
 import { ROLE_OPTIONS, PASSWORD_HINT } from "../constants";
 import { getApiErrorMessage } from "@/lib/error-utils";
 import { toast } from "sonner";
+
+// 010 — Roles que deben capturar Cliente al crear el usuario.
+const CLIENT_REQUIRED_ROLES = new Set<CreateUserFormValues["role"]>([
+  "account_executive",
+  "recruiter",
+]);
+
+const INVALID_CLIENT_MESSAGE = "cliente inactivo o inexistente";
 
 interface CreateUserFormProps {
   onSuccess?: () => void;
@@ -30,11 +43,15 @@ interface CreateUserFormProps {
 export function CreateUserForm({ onSuccess, onCancel }: CreateUserFormProps) {
   const [serverError, setServerError] = useState<string | null>(null);
   const createUser = useCreateUser();
+  const queryClient = useQueryClient();
+  const activeClients = useActiveClients();
 
   const {
     register,
     handleSubmit,
     setValue,
+    setError,
+    clearErrors,
     watch,
     formState: { errors, isSubmitting },
   } = useForm<CreateUserFormValues>({
@@ -46,20 +63,53 @@ export function CreateUserForm({ onSuccess, onCancel }: CreateUserFormProps) {
       lastName: "",
       role: "recruiter",
       isFreelancer: false,
+      clientId: undefined,
     },
   });
 
   const selectedRole = watch("role");
   const isFreelancer = watch("isFreelancer");
+  const clientId = watch("clientId");
+  const showClientField = CLIENT_REQUIRED_ROLES.has(selectedRole);
+
+  // 010 / US3 — Al cambiar a un rol que NO requiere cliente (admin/manager),
+  // limpiamos cualquier valor previo y removemos errores; así el form queda
+  // consistente y no enviamos un clientId stale al server (FR-005 sigue
+  // siendo defensivo en el server, pero esto evita confusión visual).
+  useEffect(() => {
+    if (!CLIENT_REQUIRED_ROLES.has(selectedRole)) {
+      setValue("clientId", undefined, { shouldValidate: false });
+      clearErrors("clientId");
+    }
+  }, [selectedRole, setValue, clearErrors]);
 
   const onSubmit = async (data: CreateUserFormValues) => {
     setServerError(null);
+    // Defensiva: si el rol no requiere cliente, removemos el clientId del
+    // payload (aunque el useEffect ya debería haberlo limpiado).
+    const payload: CreateUserFormValues = CLIENT_REQUIRED_ROLES.has(data.role)
+      ? data
+      : { ...data, clientId: undefined };
+
     try {
-      await createUser.mutateAsync(data);
+      await createUser.mutateAsync(payload);
       toast.success("Usuario creado exitosamente");
       onSuccess?.();
     } catch (err) {
-      setServerError(getApiErrorMessage(err, "Error al crear el usuario"));
+      // 010 / Q5 — Cuando el server rechaza por cliente inactivo/inexistente,
+      // refrescamos la lista activa para que el operador pueda re-elegir
+      // sin re-tipear el resto del formulario.
+      const message = getApiErrorMessage(err, "Error al crear el usuario");
+      if (message === INVALID_CLIENT_MESSAGE) {
+        await queryClient.invalidateQueries({
+          queryKey: ACTIVE_CLIENTS_QUERY_KEY,
+        });
+        setError("clientId", {
+          type: "server",
+          message: INVALID_CLIENT_MESSAGE,
+        });
+      }
+      setServerError(message);
     }
   };
 
@@ -154,8 +204,14 @@ export function CreateUserForm({ onSuccess, onCancel }: CreateUserFormProps) {
             })
           }
         >
-          <SelectTrigger id="role">
-            <SelectValue placeholder="Seleccionar rol" />
+          <SelectTrigger id="role" data-testid="select-rol">
+            <SelectValue placeholder="Seleccionar rol">
+              {(value: string | null) =>
+                value
+                  ? (ROLE_OPTIONS.find((o) => o.value === value)?.label ?? value)
+                  : null
+              }
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {ROLE_OPTIONS.map((option) => (
@@ -171,6 +227,55 @@ export function CreateUserForm({ onSuccess, onCancel }: CreateUserFormProps) {
           </p>
         )}
       </div>
+
+      {showClientField && (
+        <div>
+          <Label htmlFor="clientId" className="mb-1">
+            Cliente <span className="text-destructive">*</span>
+          </Label>
+          <Select
+            value={clientId ?? ""}
+            onValueChange={(value) =>
+              setValue("clientId", value ?? undefined, {
+                shouldValidate: true,
+              })
+            }
+          >
+            <SelectTrigger id="clientId" data-testid="select-cliente">
+              <SelectValue placeholder="Seleccionar cliente">
+                {(value: string | null) =>
+                  value
+                    ? (activeClients.data?.find((c) => c.id === value)?.name ??
+                      value)
+                    : null
+                }
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {activeClients.isLoading ? (
+                <SelectItem value="__loading__" disabled>
+                  Cargando clientes…
+                </SelectItem>
+              ) : activeClients.data && activeClients.data.length > 0 ? (
+                activeClients.data.map((client) => (
+                  <SelectItem key={client.id} value={client.id}>
+                    {client.name}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="__empty__" disabled>
+                  No hay clientes activos
+                </SelectItem>
+              )}
+            </SelectContent>
+          </Select>
+          {errors.clientId && (
+            <p className="text-sm text-destructive mt-1">
+              {errors.clientId.message}
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center gap-2">
         <Checkbox

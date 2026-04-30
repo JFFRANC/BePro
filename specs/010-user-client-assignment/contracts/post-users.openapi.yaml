@@ -1,0 +1,183 @@
+openapi: 3.1.0
+info:
+  title: BePro API — POST /users (010 extension)
+  version: "010.0"
+  description: >
+    Existing endpoint extended to optionally capture a primary client assignment
+    at user creation time. When `clientId` is supplied with role
+    `account_executive` or `recruiter`, the API atomically writes the user, a
+    client_assignments row (accountExecutiveId=NULL), and the user.created
+    audit event in a single transaction.
+
+paths:
+  /api/users:
+    post:
+      operationId: createUser
+      summary: Create a user; optionally assign a primary client.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+            examples:
+              recruiterWithClient:
+                summary: Recruiter assigned to a client
+                value:
+                  email: "ana.lopez@bepro.mx"
+                  password: "Sup3rSecret!"
+                  firstName: "Ana"
+                  lastName: "López"
+                  role: "recruiter"
+                  isFreelancer: false
+                  clientId: "1c1c63d9-2b5a-4f7e-9d1a-2cd2af1fbb0e"
+              adminNoClient:
+                summary: Admin (clientId omitted)
+                value:
+                  email: "boss@bepro.mx"
+                  password: "Sup3rSecret!"
+                  firstName: "Hector"
+                  lastName: "Franco"
+                  role: "admin"
+                  isFreelancer: false
+              adminWithIgnoredClient:
+                summary: Admin with a stray clientId (silently ignored, no assignment written)
+                value:
+                  email: "boss2@bepro.mx"
+                  password: "Sup3rSecret!"
+                  firstName: "Maria"
+                  lastName: "García"
+                  role: "admin"
+                  isFreelancer: false
+                  clientId: "1c1c63d9-2b5a-4f7e-9d1a-2cd2af1fbb0e"
+      responses:
+        "201":
+          description: User created (and assignment written if applicable)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/UserDto"
+        "400":
+          description: |
+            Validation failure. Two distinct reasons:
+              * Zod schema rejection (missing `clientId` for AE/recruiter; bad email; weak password). Standard validator response.
+              * Client not active in this tenant (or cross-tenant). Uniform message — no enumeration leak.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ZodValidationError"
+                  - $ref: "#/components/schemas/InvalidClientError"
+              examples:
+                invalidClient:
+                  value:
+                    error: "cliente inactivo o inexistente"
+                missingClientForRecruiter:
+                  value:
+                    error:
+                      issues:
+                        - path: ["clientId"]
+                          message: "Cliente es requerido para este rol"
+        "401":
+          description: Missing or invalid JWT.
+        "403":
+          description: Caller is not an admin (per spec 004).
+        "409":
+          description: Email already in use within this tenant.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "El correo electrónico ya está registrado en esta organización"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    CreateUserRequest:
+      type: object
+      required: [email, password, firstName, lastName, role, isFreelancer]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          description: Must include upper, lower, digit.
+        firstName:
+          type: string
+          maxLength: 100
+        lastName:
+          type: string
+          maxLength: 100
+        role:
+          type: string
+          enum: [admin, manager, account_executive, recruiter]
+        isFreelancer:
+          type: boolean
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+          description: |
+            Optional. REQUIRED when role is `account_executive` or `recruiter`
+            (Zod refinement). IGNORED when role is `admin` or `manager`
+            (defensive no-op per FR-005). Must point to an active client in the
+            caller's tenant; otherwise the API returns 400 "cliente inactivo o
+            inexistente".
+
+    UserDto:
+      type: object
+      required: [id, email, firstName, lastName, role, isFreelancer, isActive, mustChangePassword, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        firstName: { type: string }
+        lastName: { type: string }
+        role: { type: string, enum: [admin, manager, account_executive, recruiter] }
+        isFreelancer: { type: boolean }
+        isActive: { type: boolean }
+        mustChangePassword: { type: boolean }
+        lastLoginAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    InvalidClientError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          enum: ["cliente inactivo o inexistente"]
+
+    ZodValidationError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          properties:
+            issues:
+              type: array
+              items:
+                type: object
+                properties:
+                  path:
+                    type: array
+                    items: { type: string }
+                  message:
+                    type: string

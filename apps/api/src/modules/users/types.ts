@@ -20,6 +20,9 @@ export interface CreateUserParams {
   lastName: string;
   role: UserRole;
   isFreelancer: boolean;
+  // 010 — primary client capture. Required for AE/recruiter at the validator
+  // layer; silently ignored when role is admin/manager (defensive no-op).
+  clientId?: string;
 }
 
 export interface UpdateUserParams {
