@@ -69,7 +69,7 @@ app.post("/login", zValidator("json", loginSchema), (c) => { ... });
 |---|---|---|
 | `auth` | `src/modules/auth/` | JWT login, refresh token rotation, role middleware, `SET LOCAL app.tenant_id` on every request |
 | `tenants` | embedded in `auth` / `users` | Tenant provisioning + slug lookup (pre-login, RLS-exempt table) |
-| `users` | `src/modules/users/` | User CRUD within tenant, role assignment, CSV import, password management |
+| `users` | `src/modules/users/` | User CRUD within tenant, role assignment, CSV import, password management. Feature 010: `POST /users` también escribe una fila a `client_assignments` (atómica) cuando el body trae `clientId` y el rol es `account_executive` o `recruiter`; admin/manager descartan `clientId` (no-op). Errores de cliente uniformes en 400 "cliente inactivo o inexistente". |
 | `clients` | `src/modules/clients/` | Client CRUD, contacts, positions, documents, AE assignments, per-client `form_config` |
 | `candidates` | `src/modules/candidates/` | Registration with duplicate warning + privacy acknowledgement, 14-state FSM with role gating, R2 attachments (server-proxied upload, see ADR-002), admin reactivation (FR-038a), rejection/decline categories, retention-review compliance surface (FR-003a), append-only audit writes |
 | `password-reset` | `src/modules/password-reset/` | Self-service reset (feature 009): public `POST /api/auth/password-reset/{request,confirm}`, KV-backed per-email rate-limit (`PASSWORD_RESET_RATE`), enumeration-safe response shape, 30-min single-use tokens, refresh-token revoke + lockout-clear inside the confirm transaction, audit writes only on success branches. Daily cleanup cron lives in `src/scheduled.ts`. See ADR-009. |

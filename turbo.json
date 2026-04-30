@@ -19,6 +19,23 @@
     "test": {
       "dependsOn": ["^build"]
     },
+    "test:integration": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "env": ["DATABASE_URL", "DATABASE_URL_WORKER"]
+    },
+    "test:e2e": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "env": [
+        "DATABASE_URL",
+        "DATABASE_URL_WORKER",
+        "VITE_LOGIN_TENANT_FIXED",
+        "E2E_TENANT_SLUG",
+        "E2E_ADMIN_EMAIL",
+        "E2E_ADMIN_PASSWORD"
+      ]
+    },
     "clean": {
       "cache": false
     }

@@ -3,9 +3,18 @@ import { Hono } from "hono";
 import { sign } from "hono/jwt";
 import type { HonoEnv } from "../../../types.js";
 
-vi.mock("../service.js", () => ({
-  createUser: vi.fn(),
-}));
+vi.mock("../service.js", () => {
+  class ClientNotFoundError extends Error {
+    constructor() {
+      super("CLIENT_NOT_FOUND");
+      this.name = "ClientNotFoundError";
+    }
+  }
+  return {
+    createUser: vi.fn(),
+    ClientNotFoundError,
+  };
+});
 
 vi.mock("../../../lib/db.js", () => ({
   getDb: vi.fn(),
@@ -14,10 +23,12 @@ vi.mock("../../../lib/db.js", () => ({
 vi.mock("@bepro/db", () => ({
   tenants: { id: "id", isActive: "is_active" },
   users: { _: "users_table" },
+  clients: { _: "clients_table" },
+  clientAssignments: { _: "client_assignments_table" },
   auditEvents: { _: "audit_events_table" },
 }));
 
-import { createUser } from "../service.js";
+import { createUser, ClientNotFoundError } from "../service.js";
 import { getDb } from "../../../lib/db.js";
 
 const JWT_SECRET = "test-secret-key-256-bits-long!!";
@@ -80,12 +91,25 @@ describe("POST /api/users", () => {
     app.route("/api/users", usersRoutes);
   });
 
+  const VALID_CLIENT_ID = "1c1c63d9-2b5a-4f7e-9d1a-2cd2af1fbb0e";
+
+  // 010 — recruiter requires clientId at the validator layer (FR-002).
   const validBody = {
     email: "new@example.com",
     password: "SecurePass123",
     firstName: "María",
     lastName: "García",
     role: "recruiter",
+    isFreelancer: false,
+    clientId: VALID_CLIENT_ID,
+  };
+
+  const validAdminBody = {
+    email: "boss@example.com",
+    password: "SecurePass123",
+    firstName: "Hector",
+    lastName: "Franco",
+    role: "admin",
     isFreelancer: false,
   };
 
@@ -172,5 +196,82 @@ describe("POST /api/users", () => {
     }, TEST_ENV);
 
     expect(res.status).toBe(401);
+  });
+
+  // 010 — Client assignment paths
+  it("returns 400 'cliente inactivo o inexistente' when service throws ClientNotFoundError", async () => {
+    vi.mocked(createUser).mockRejectedValue(new ClientNotFoundError());
+
+    const token = await createValidToken();
+    const res = await app.request("/api/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(validBody),
+    }, TEST_ENV);
+
+    expect(res.status).toBe(400);
+    const body = await res.json() as any;
+    expect(body.error).toBe("cliente inactivo o inexistente");
+  });
+
+  it("returns 422 when role is recruiter but clientId is missing (Zod refinement)", async () => {
+    const token = await createValidToken();
+    const { clientId, ...bodyWithoutClient } = validBody;
+    void clientId;
+    const res = await app.request("/api/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(bodyWithoutClient),
+    }, TEST_ENV);
+
+    expect(res.status).toBe(422);
+  });
+
+  it("returns 201 for admin without clientId (admin doesn't require client)", async () => {
+    vi.mocked(createUser).mockResolvedValue({
+      id: "new-admin-uuid",
+      email: "boss@example.com",
+      firstName: "Hector",
+      lastName: "Franco",
+      role: "admin",
+      isFreelancer: false,
+      isActive: true,
+      mustChangePassword: true,
+      lastLoginAt: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    const token = await createValidToken();
+    const res = await app.request("/api/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(validAdminBody),
+    }, TEST_ENV);
+
+    expect(res.status).toBe(201);
+  });
+
+  it("returns 422 when clientId is malformed (not a uuid)", async () => {
+    const token = await createValidToken();
+    const res = await app.request("/api/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ ...validBody, clientId: "not-a-uuid" }),
+    }, TEST_ENV);
+
+    expect(res.status).toBe(422);
   });
 });

@@ -1,6 +1,11 @@
 import { eq, and, or, ilike, sql, count } from "drizzle-orm";
 import { hash, compare } from "bcryptjs";
-import { users, refreshTokens } from "@bepro/db";
+import {
+  users,
+  refreshTokens,
+  clients,
+  clientAssignments,
+} from "@bepro/db";
 import type { Database } from "@bepro/db";
 import { recordAuditEvent } from "../../lib/audit.js";
 import type { CreateUserParams, ListUsersParams, UpdateUserParams } from "./types.js";
@@ -8,6 +13,20 @@ import { bulkImportRowSchema, type IUserDto, type IUserListResponse, type UserRo
 import type { BulkImportResult } from "./types.js";
 
 const BCRYPT_COST = 12;
+
+/**
+ * 010-user-client-assignment — error tipado que el route handler mapea a
+ * `400 { error: "cliente inactivo o inexistente" }`. Se lanza cuando el
+ * `clientId` enviado no existe / no está activo / pertenece a otro tenant
+ * (RLS hace que estos tres casos sean indistinguibles, lo cual es deseable
+ * para evitar enumeration leak — Q4 del clarify).
+ */
+export class ClientNotFoundError extends Error {
+  constructor() {
+    super("CLIENT_NOT_FOUND");
+    this.name = "ClientNotFoundError";
+  }
+}
 
 function toUserDto(user: typeof users.$inferSelect): IUserDto {
   return {
@@ -41,6 +60,28 @@ export async function createUser(
     return null;
   }
 
+  // 010 — Captura de cliente primario. Sólo aplica a AE/recruiter; para
+  // admin/manager descartamos cualquier clientId que llegue (defensive no-op,
+  // FR-005). El validator Zod ya rechaza AE/recruiter sin clientId, así que
+  // aquí confiamos en lo recibido.
+  const captureClient =
+    (params.role === "account_executive" || params.role === "recruiter") &&
+    Boolean(params.clientId);
+  const clientId = captureClient ? params.clientId! : undefined;
+
+  // Validamos el cliente ANTES del bcrypt — fail-fast cuando el cliente no
+  // existe / está inactivo / es de otro tenant (RLS unifica los tres casos
+  // en "0 filas", lo cual nos da el no-enumeration property gratis, Q4).
+  if (clientId) {
+    const [client] = await db
+      .select({ id: clients.id })
+      .from(clients)
+      .where(and(eq(clients.id, clientId), eq(clients.isActive, true)));
+    if (!client) {
+      throw new ClientNotFoundError();
+    }
+  }
+
   const passwordHash = await hash(params.password, BCRYPT_COST);
 
   const [created] = await db
@@ -57,6 +98,19 @@ export async function createUser(
     })
     .returning();
 
+  // 010 — Inserta la fila en client_assignments en la MISMA transacción que
+  // el insert del user (tenantMiddleware envuelve toda la handler en
+  // `SET LOCAL app.tenant_id`). accountExecutiveId siempre NULL aquí; pairing
+  // recruiter ↔ líder AE se hace después por el flujo batch de 008 (Q3).
+  if (clientId) {
+    await db.insert(clientAssignments).values({
+      tenantId,
+      clientId,
+      userId: created.id,
+      accountExecutiveId: null,
+    });
+  }
+
   await recordAuditEvent(db, {
     tenantId,
     actorId,
@@ -69,6 +123,7 @@ export async function createUser(
       lastName: params.lastName,
       role: params.role,
       isFreelancer: params.isFreelancer,
+      ...(clientId ? { clientId } : {}),
     },
   });
 

@@ -8,6 +8,9 @@ export async function createUser(data: {
   lastName: string;
   role: string;
   isFreelancer: boolean;
+  // 010 — Cliente primario opcional. Requerido para AE/recruiter (Zod
+  // refinement); ignorado server-side para admin/manager.
+  clientId?: string;
 }): Promise<IUserDto> {
   const response = await apiClient.post<{ data: IUserDto }>("/users", data);
   return response.data.data;
