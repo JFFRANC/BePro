@@ -23,6 +23,7 @@ import {
   createClient,
   listClients,
   getClientById,
+  getPrimaryAccountExecutiveName,
   updateClient,
   verifyClientAccess,
   verifyClientWriteAccess,
@@ -115,14 +116,23 @@ clientsRoutes.get("/:id", async (c) => {
   }
 
   // Cargar sub-recursos para el detalle
-  const [contacts, positions, assignments] = await Promise.all([
-    listContacts(db, clientId),
-    listPositions(db, clientId),
-    listAssignments(db, clientId),
-  ]);
+  const [contacts, positions, assignments, primaryAccountExecutiveName] =
+    await Promise.all([
+      listContacts(db, clientId),
+      listPositions(db, clientId),
+      listAssignments(db, clientId),
+      // 012-client-detail-ux / FR-015 + R-04 — earliest-assigned AE name.
+      getPrimaryAccountExecutiveName(db, clientId),
+    ]);
 
   return c.json({
-    data: { ...client, contacts, positions, assignments },
+    data: {
+      ...client,
+      contacts,
+      positions,
+      assignments,
+      primaryAccountExecutiveName,
+    },
   });
 });
 

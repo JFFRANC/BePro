@@ -35,6 +35,26 @@ vi.mock("../service.js", () => ({
       this.name = "ClientNotFoundError";
     }
   },
+  // 012-client-detail-ux — fail-closed cuando un tenant tiene formConfig dañado.
+  FormConfigTamperedError: class FormConfigTamperedError extends Error {
+    code = "form_config_tampered" as const;
+    constructor(
+      public readonly tenantId: string,
+      public readonly clientId: string,
+      public readonly missingBaseKeys: string[],
+    ) {
+      super("tampered");
+      this.name = "FormConfigTamperedError";
+    }
+  },
+  // 012 / R-07 — positionId no pertenece al cliente.
+  InvalidPositionError: class InvalidPositionError extends Error {
+    code = "invalid_position" as const;
+    constructor() {
+      super("invalid_position");
+      this.name = "InvalidPositionError";
+    }
+  },
 }));
 
 vi.mock("../../../lib/db.js", () => ({ getDb: vi.fn() }));

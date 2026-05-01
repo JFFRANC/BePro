@@ -27,6 +27,8 @@
     "db:query": "export $(cat ../../apps/api/.dev.vars | xargs) && tsx scripts/db-query.ts",
     "db:create-app-worker": "export $(cat ../../apps/api/.dev.vars | xargs) && tsx scripts/create-app-worker.ts",
     "db:reset-admin": "export $(cat ../../apps/api/.dev.vars | xargs) && tsx scripts/reset-admin.ts",
+    "migrate:012": "export $(cat ../../apps/api/.dev.vars | xargs) && tsx scripts/012-rename-legacy-formconfig-collisions.ts",
+    "migrate:012:dry-run": "export $(cat ../../apps/api/.dev.vars | xargs) && tsx scripts/012-rename-legacy-formconfig-collisions.ts --dry-run",
     "db:setup": "pnpm db:push && pnpm db:apply-rls && pnpm db:seed",
     "db:reset": "pnpm db:push -- --force && pnpm db:apply-rls && pnpm db:seed"
   },

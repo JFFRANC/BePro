@@ -7,7 +7,8 @@ import { toast } from "sonner";
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { useClients } from "@/modules/clients/hooks/useClients";
+import { useClient, useClients } from "@/modules/clients/hooks/useClients";
+import { useAuth } from "@/modules/auth/hooks/useAuth";
 import { Combobox } from "@/components/combobox";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft } from "lucide-react";
@@ -17,6 +18,7 @@ import {
   CandidateForm,
   type CandidateFormValues,
   type ClientFormConfigShape,
+  type PositionOption,
 } from "../components/CandidateForm";
 // 008-ux-roles-refinements / US7 — PrivacyNoticeCheckbox removed from the flow
 // (FR-RP-001 / FR-RP-005). Evidence is collected offline by the recruiter per
@@ -54,6 +56,26 @@ export function NewCandidatePage() {
   );
   const selectedClient = clientsQuery.data?.data.find((c) => c.id === clientId);
   const formConfig = (selectedClient?.formConfig ?? {}) as ClientFormConfigShape;
+
+  // 012-client-detail-ux / FR-009, FR-015 — el detalle del cliente trae los
+  // puestos activos (positionId Select options) y `primaryAccountExecutiveName`.
+  const clientDetailQuery = useClient(clientId);
+  const positionOptions = useMemo<PositionOption[]>(
+    () =>
+      (clientDetailQuery.data?.positions ?? [])
+        .filter((p) => p.isActive)
+        .map((p) => ({ value: p.id, label: p.name })),
+    [clientDetailQuery.data?.positions],
+  );
+  const accountExecutiveName =
+    clientDetailQuery.data?.primaryAccountExecutiveName ?? "";
+
+  // 012 / FR-015 — recruiterName se prefilea desde el JWT/auth context.
+  const { user } = useAuth();
+  const recruiterName =
+    user?.firstName && user?.lastName
+      ? `${user.firstName} ${user.lastName}`
+      : "";
 
   const createCandidate = useCreateCandidate({
     onCreated: async (cand) => {
@@ -156,6 +178,9 @@ export function NewCandidatePage() {
                 clientId={clientId}
                 formConfig={formConfig}
                 onValidSubmit={handleValidSubmit}
+                positionOptions={positionOptions}
+                recruiterName={recruiterName}
+                accountExecutiveName={accountExecutiveName}
               />
             </FormSection>
 

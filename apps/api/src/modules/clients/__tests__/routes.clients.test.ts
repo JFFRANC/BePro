@@ -7,6 +7,8 @@ vi.mock("../service.js", () => ({
   createClient: vi.fn(),
   listClients: vi.fn(),
   getClientById: vi.fn(),
+  // 012-client-detail-ux / R-04 — primary AE name resolver consumed by route.
+  getPrimaryAccountExecutiveName: vi.fn().mockResolvedValue(undefined),
   updateClient: vi.fn(),
   verifyClientAccess: vi.fn(),
   verifyClientWriteAccess: vi.fn(),

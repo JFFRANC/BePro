@@ -26,7 +26,9 @@ import {
   CandidateNotFoundError,
   ClientNotFoundError,
   DuplicatesDetectedError,
+  FormConfigTamperedError,
   FormConfigValidationError,
+  InvalidPositionError,
   InvalidReactivationError,
   PrivacyNoticeMismatchError,
   StaleStatusError,
@@ -490,6 +492,30 @@ candidatesRoutes.post(
         return c.json(
           { code: err.code, message: err.message, details: err.issues },
           422,
+        );
+      }
+      // 012-client-detail-ux / FR-011 — fail-closed con repair-message.
+      if (err instanceof FormConfigTamperedError) {
+        return c.json(
+          {
+            error: err.code,
+            tenantId: err.tenantId,
+            clientId: err.clientId,
+            missingBaseKeys: err.missingBaseKeys,
+            message: err.message,
+          },
+          500,
+        );
+      }
+      // 012 / R-07 — positionId invalido.
+      if (err instanceof InvalidPositionError) {
+        return c.json(
+          {
+            error: err.code,
+            field: "additional_fields.positionId",
+            message: err.message,
+          },
+          400,
         );
       }
       if (err instanceof ClientNotFoundError) {

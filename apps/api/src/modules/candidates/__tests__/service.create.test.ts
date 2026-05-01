@@ -4,6 +4,9 @@ vi.mock("@bepro/db", () => ({
   candidates: { _: "candidates_table", id: "id", tenantId: "tenant_id", clientId: "client_id" },
   candidateDuplicateLinks: { _: "candidate_duplicate_links_table" },
   clients: { _: "clients_table", id: "id", tenantId: "tenant_id" },
+  // 012-client-detail-ux — clientPositions FK (positionId).
+  clientPositions: { _: "client_positions_table", id: "id", clientId: "client_id", isActive: "is_active" },
+  clientAssignments: { _: "client_assignments_table" },
   privacyNotices: {
     _: "privacy_notices_table",
     id: "id",
@@ -69,15 +72,22 @@ function createMockDb(options: MockOptions = {}) {
   } = options;
 
   // Diferentes selects regresan distintos resultados; rastreamos por la "primera tabla".
+  // 012-client-detail-ux — el orden de selects ahora es:
+  //   1) clients
+  //   2) privacy_notices (rama del active notice)
+  //   3) client_positions (validación FK del positionId — NUEVO)
+  //   4) candidates (findDuplicatesForCandidate)
+  //   5) (si hay dups) users → recruiter display
+  //   6) recruiter final lookup
+  const VALID_POSITION_ID = "66666666-6666-4666-9666-666666666666";
   let selectCallCount = 0;
   const selectResults: unknown[][] = [
     client ? [client] : [],
     notice ? [notice] : [],
-    // Para findDuplicatesForCandidate el primer select es a candidates (duplicados encontrados).
+    // 012 — positionId FK. Por defecto la posición existe para facilitar el happy path.
+    [{ id: VALID_POSITION_ID }],
     duplicates,
-    // Si hay duplicados, el siguiente select es a users para resolver display_name (devolvemos vacio salvo que el caller lo establezca)
     duplicates.length > 0 ? [recruiter] : [],
-    // Insert returning + recruiter final lookup
     [recruiter],
   ];
 
@@ -126,6 +136,9 @@ function createMockDb(options: MockOptions = {}) {
   return { db: chainable, insertedRows, auditedRows, dupLinksInserted };
 }
 
+// 012-client-detail-ux — additional_fields ahora DEBE contener los 9 campos
+// base (FR-012). Sin ellos el dynamic schema falla con FormConfigValidationError.
+const VALID_POSITION_ID = "66666666-6666-4666-9666-666666666666";
 const baseInput = {
   client_id: CLIENT_ID,
   first_name: "Juan",
@@ -135,7 +148,17 @@ const baseInput = {
   source: "LinkedIn",
   privacy_notice_id: NOTICE_ID,
   privacy_acknowledged: true as const,
-  additional_fields: {},
+  additional_fields: {
+    fullName: "Juan Pérez",
+    interviewPhone: "+52 55 1234 5678",
+    interviewDate: "2026-05-15",
+    interviewTime: "10:30",
+    positionId: VALID_POSITION_ID,
+    state: "Querétaro",
+    municipality: "San Juan del Río",
+    recruiterName: "Hector Franco",
+    accountExecutiveName: "Javier Romero",
+  },
 };
 
 describe("createCandidate (US1)", () => {

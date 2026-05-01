@@ -17,6 +17,8 @@ export interface IClientDto {
   address?: string;
   latitude?: number;
   longitude?: number;
+  // 012-client-detail-ux / FR-001 — descripción libre opcional (≤2000).
+  description?: string;
   isActive: boolean;
   formConfig: IClientFormConfig;
   createdAt: string;
@@ -27,6 +29,8 @@ export interface IClientDetailDto extends IClientDto {
   contacts: IClientContactDto[];
   positions: IClientPositionDto[];
   assignments: IClientAssignmentDto[];
+  // 012 / R-04 — earliest-assigned AE full name; undefined si no hay AE.
+  primaryAccountExecutiveName?: string;
 }
 
 export interface IClientAssignmentDto {
@@ -46,6 +50,8 @@ export interface IClientContactDto {
   name: string;
   phone: string;
   email: string;
+  // 012-client-detail-ux / FR-002 — cargo / puesto opcional.
+  position?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -126,6 +132,7 @@ export interface ICreateClientRequest {
   address?: string;
   latitude?: number;
   longitude?: number;
+  description?: string;
   formConfig?: IClientFormConfig;
 }
 
@@ -137,6 +144,8 @@ export interface IUpdateClientRequest {
   latitude?: number;
   longitude?: number;
   isActive?: boolean;
+  // 012 — null limpia el campo; "" se normaliza a null en el servicio.
+  description?: string | null;
   formConfig?: IClientFormConfig;
 }
 
@@ -149,12 +158,14 @@ export interface ICreateContactRequest {
   name: string;
   phone: string;
   email: string;
+  position?: string;
 }
 
 export interface IUpdateContactRequest {
   name?: string;
   phone?: string;
   email?: string;
+  position?: string | null;
 }
 
 export interface ICreatePositionRequest {

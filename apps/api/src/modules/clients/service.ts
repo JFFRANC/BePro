@@ -47,6 +47,8 @@ function toClientDto(row: typeof clients.$inferSelect): IClientDto {
     address: row.address ?? undefined,
     latitude: row.latitude ? Number(row.latitude) : undefined,
     longitude: row.longitude ? Number(row.longitude) : undefined,
+    // 012-client-detail-ux — descripción libre, plain text. UI escapa.
+    description: row.description ?? undefined,
     isActive: row.isActive,
     formConfig: (row.formConfig as IClientFormConfig) ?? DEFAULT_FORM_CONFIG,
     createdAt: row.createdAt.toISOString(),
@@ -61,6 +63,8 @@ function toContactDto(row: typeof clientContacts.$inferSelect): IClientContactDt
     name: row.name,
     phone: row.phone,
     email: row.email,
+    // 012-client-detail-ux — cargo / puesto opcional.
+    position: row.position ?? undefined,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -253,6 +257,8 @@ export async function createClient(
       address: input.address ?? null,
       latitude: input.latitude?.toString() ?? null,
       longitude: input.longitude?.toString() ?? null,
+      // 012 — empty string normalize a null en la creación también.
+      description: input.description ? input.description : null,
       formConfig,
     })
     .returning();
@@ -335,6 +341,41 @@ export async function getClientById(db: Database, clientId: string) {
   return toClientDto(row);
 }
 
+// 012-client-detail-ux / R-04 — primary AE resolver.
+// Definición: el AE asignado más antiguo (`client_assignments.created_at` ASC)
+// donde la fila representa al AE mismo (account_executive_id IS NULL) y el
+// usuario subyacente sigue activo. Devuelve el nombre completo o undefined.
+//
+// Schema check: `users` tiene `firstName` + `lastName` (no hay `full_name`),
+// así que componemos el display name vía SQL `concat_ws(' ', first_name, last_name)`.
+export async function getPrimaryAccountExecutiveName(
+  db: Database,
+  clientId: string,
+): Promise<string | undefined> {
+  const rows = await db
+    .select({
+      firstName: users.firstName,
+      lastName: users.lastName,
+      createdAt: clientAssignments.createdAt,
+    })
+    .from(clientAssignments)
+    .innerJoin(users, eq(clientAssignments.userId, users.id))
+    .where(
+      and(
+        eq(clientAssignments.clientId, clientId),
+        sql`${clientAssignments.accountExecutiveId} IS NULL`,
+        eq(users.role, "account_executive"),
+        eq(users.isActive, true),
+      ),
+    )
+    .orderBy(clientAssignments.createdAt)
+    .limit(1);
+  if (rows.length === 0) return undefined;
+  const r = rows[0];
+  const display = `${r.firstName} ${r.lastName}`.trim();
+  return display.length > 0 ? display : undefined;
+}
+
 export async function updateClient(
   db: Database,
   tenantId: string,
@@ -360,6 +401,10 @@ export async function updateClient(
   if (input.longitude !== undefined)
     updateData.longitude = input.longitude?.toString() ?? null;
   if (input.isActive !== undefined) updateData.isActive = input.isActive;
+  // 012 — descripción: null o "" → NULL (E-08 compatible).
+  if (input.description !== undefined) {
+    updateData.description = input.description ? input.description : null;
+  }
   if (input.formConfig !== undefined) updateData.formConfig = input.formConfig;
 
   const [updated] = await db
@@ -368,6 +413,21 @@ export async function updateClient(
     .where(eq(clients.id, clientId))
     .returning();
 
+  // 012 — diff incluye `description` sólo si cambió. Mantenemos el shape
+  // existente (oldValues / newValues) para no romper consumidores de audit.
+  const oldValues: Record<string, unknown> = {
+    name: existing.name,
+    isActive: existing.isActive,
+  };
+  const newValues: Record<string, unknown> = {
+    name: updated.name,
+    isActive: updated.isActive,
+  };
+  if ((existing.description ?? null) !== (updated.description ?? null)) {
+    oldValues.description = existing.description ?? null;
+    newValues.description = updated.description ?? null;
+  }
+
   await createAuditEvent(
     db,
     tenantId,
@@ -375,8 +435,8 @@ export async function updateClient(
     "update",
     "client",
     clientId,
-    { name: existing.name, isActive: existing.isActive },
-    { name: updated.name, isActive: updated.isActive },
+    oldValues,
+    newValues,
   );
 
   return toClientDto(updated);
@@ -1063,8 +1123,14 @@ export async function createContact(
   tenantId: string,
   actorId: string,
   clientId: string,
-  input: { name: string; phone: string; email: string },
+  input: { name: string; phone: string; email: string; position?: string | null },
 ) {
+  // 012 — empty string normaliza a null (E-08).
+  const normalizedPosition =
+    input.position === undefined || input.position === null || input.position === ""
+      ? null
+      : input.position;
+
   const [created] = await db
     .insert(clientContacts)
     .values({
@@ -1073,6 +1139,7 @@ export async function createContact(
       name: input.name,
       phone: input.phone,
       email: input.email,
+      position: normalizedPosition,
     })
     .returning();
 
@@ -1080,6 +1147,7 @@ export async function createContact(
     clientId,
     name: input.name,
     email: input.email,
+    position: normalizedPosition,
   });
 
   return toContactDto(created);
@@ -1100,7 +1168,12 @@ export async function updateContact(
   tenantId: string,
   actorId: string,
   contactId: string,
-  input: { name?: string; phone?: string; email?: string },
+  input: {
+    name?: string;
+    phone?: string;
+    email?: string;
+    position?: string | null;
+  },
 ) {
   const [existing] = await db
     .select()
@@ -1114,6 +1187,11 @@ export async function updateContact(
   if (input.name !== undefined) updateData.name = input.name;
   if (input.phone !== undefined) updateData.phone = input.phone;
   if (input.email !== undefined) updateData.email = input.email;
+  // 012 — null o "" → NULL (E-08).
+  if (input.position !== undefined) {
+    updateData.position =
+      input.position === null || input.position === "" ? null : input.position;
+  }
 
   const [updated] = await db
     .update(clientContacts)
@@ -1121,13 +1199,30 @@ export async function updateContact(
     .where(eq(clientContacts.id, contactId))
     .returning();
 
-  await createAuditEvent(db, tenantId, actorId, "update", "client_contact", contactId, {
+  // 012 — `position` sólo aparece en el diff cuando cambia.
+  const oldValues: Record<string, unknown> = {
     name: existing.name,
     email: existing.email,
-  }, {
+  };
+  const newValues: Record<string, unknown> = {
     name: updated.name,
     email: updated.email,
-  });
+  };
+  if ((existing.position ?? null) !== (updated.position ?? null)) {
+    oldValues.position = existing.position ?? null;
+    newValues.position = updated.position ?? null;
+  }
+
+  await createAuditEvent(
+    db,
+    tenantId,
+    actorId,
+    "update",
+    "client_contact",
+    contactId,
+    oldValues,
+    newValues,
+  );
 
   return toContactDto(updated);
 }
