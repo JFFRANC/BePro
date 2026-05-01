@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useClient, useUpdateClient } from "../hooks/useClients";
 import { ClientForm } from "../components/ClientForm";
-import { FormConfigEditor } from "../components/FormConfigEditor";
 import { FormConfigFieldsEditor } from "../components/FormConfigFieldsEditor";
 // 008-ux-roles-refinements / US5 — AssignmentTable replaces the old
 // AssignmentManager (single-select + "Asignar" button) with a searchable
@@ -240,9 +239,7 @@ export function ClientDetailPage() {
         )}
 
         {isAdmin && (
-          <TabsContent value="form" className="mt-4 space-y-6">
-            <FormConfigEditor client={client} />
-            {/* 008-ux-roles-refinements / US6 — admin-managed custom fields. */}
+          <TabsContent value="form" className="mt-4">
             <FormConfigFieldsEditor client={client} />
           </TabsContent>
         )}
