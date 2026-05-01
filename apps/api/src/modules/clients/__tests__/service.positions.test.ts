@@ -6,6 +6,12 @@ vi.mock("@bepro/db", () => ({
   clientContacts: { _: "client_contacts_table" },
   clientPositions: { id: "id", clientId: "client_id", name: "name", isActive: "is_active" },
   clientDocuments: { _: "client_documents_table" },
+  clientPositionDocuments: {
+    id: "id",
+    positionId: "position_id",
+    type: "type",
+    isActive: "is_active",
+  },
   users: { _: "users_table" },
   auditEvents: { _: "audit_events_table" },
 }));
@@ -85,20 +91,38 @@ describe("Client Service — listPositions", () => {
     listPositions = mod.listPositions;
   });
 
+  // 011 — listPositions ahora hace dos queries:
+  //   1) select().from(positions).where(...).orderBy(name)  (chainable hasta orderBy)
+  //   2) select({...}).from(documents).where(and(...))      (await directo)
+  // Para no romper la mock en cadena, distinguimos la primera llamada a `where`
+  // (devuelve un sub-chainable con orderBy) de la segunda (devuelve la promesa
+  // de filas de documentos).
+  function setupListMock(db: any, positionRows: any[], docRows: any[] = []) {
+    let whereCalls = 0;
+    db.where = vi.fn(() => {
+      whereCalls++;
+      if (whereCalls === 1) {
+        return { orderBy: vi.fn().mockResolvedValue(positionRows) };
+      }
+      return Promise.resolve(docRows);
+    });
+  }
+
   it("retorna solo puestos activos por defecto", async () => {
     const db = createMockDb();
-    db.orderBy = vi.fn().mockResolvedValue([samplePositionRow]);
+    setupListMock(db, [samplePositionRow]);
 
     const result = await listPositions(db as any, "client-uuid-1");
 
     expect(result).toHaveLength(1);
     expect(result[0].name).toBe("Ayudante General");
+    expect(result[0].documents).toEqual({});
   });
 
   it("retorna todos los puestos incluyendo inactivos cuando se solicita", async () => {
     const inactiveRow = { ...samplePositionRow, id: "pos-2", name: "Taladrista", isActive: false };
     const db = createMockDb();
-    db.orderBy = vi.fn().mockResolvedValue([samplePositionRow, inactiveRow]);
+    setupListMock(db, [samplePositionRow, inactiveRow]);
 
     const result = await listPositions(db as any, "client-uuid-1", true);
 

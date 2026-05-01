@@ -1,0 +1,323 @@
+openapi: 3.1.0
+info:
+  title: BePro — Position Documents
+  version: 0.11.0
+  description: |
+    Endpoints for `client_position_documents`. Uses the **server-proxied upload
+    pattern from ADR-002** — the client never talks to R2 directly. Two-step
+    upload: create record (returns id + uploadUrl) → POST raw bytes to upload
+    endpoint. Downloads stream through the Worker. The `Versiones` history
+    endpoint is admin-only (FR-018).
+
+    Authorization (FR-012):
+      - admin, manager, account_executive (own clients): create / replace / delete
+      - admin: list archived versions (FR-018)
+      - recruiter (assigned clients): GET active document only
+      - any other operator: 404 (uniform not-found per FR-016)
+
+servers:
+  - url: https://api.bepro.example/api
+    description: Production
+  - url: http://localhost:8787/api
+    description: Local dev
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    DocumentType:
+      type: string
+      enum: [contract, pase_visita]
+
+    PositionDocumentDto:
+      type: object
+      required: [id, positionId, type, originalName, mimeType, sizeBytes, isActive, uploadedBy, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        positionId: { type: string, format: uuid }
+        type:
+          $ref: "#/components/schemas/DocumentType"
+        originalName: { type: string }
+        mimeType: { type: string }
+        sizeBytes: { type: integer }
+        isActive: { type: boolean }
+        uploadedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Null until bytes have been received successfully.
+        replacedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Set when superseded; null for active rows.
+        uploadedBy: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+
+    CreateDocumentRequest:
+      type: object
+      required: [type, originalName, mimeType, sizeBytes]
+      properties:
+        type:
+          $ref: "#/components/schemas/DocumentType"
+        originalName:
+          type: string
+          minLength: 1
+          maxLength: 255
+        mimeType:
+          type: string
+          enum:
+            - application/pdf
+            - application/msword
+            - application/vnd.openxmlformats-officedocument.wordprocessingml.document
+        sizeBytes:
+          type: integer
+          minimum: 1
+          maximum: 10485760
+          description: 10 MB hard cap (FR-013).
+
+    CreateDocumentResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [id, uploadUrl, expiresAt]
+          properties:
+            id: { type: string, format: uuid }
+            uploadUrl:
+              type: string
+              format: uri
+              description: Same-origin path the client POSTs the raw body to. No presigned R2 URL.
+            expiresAt:
+              type: string
+              format: date-time
+              description: |
+                Time after which a fresh `uploadUrl` should be requested. Bound to the
+                JWT TTL (15–60 min), not to a separate signing layer (research §R1).
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+
+security:
+  - bearerAuth: []
+
+paths:
+  /clients/{clientId}/positions/{posId}/documents:
+    post:
+      summary: Create a document record (step 1 of 2)
+      description: |
+        Inserts a row in `client_position_documents` with `uploaded_at = NULL` and
+        returns its `id` plus a Worker-internal `uploadUrl`. **No R2 write happens
+        here.** The client follows up with `POST /…/documents/:id/upload`
+        carrying the raw bytes.
+
+        If a row with `is_active = true` already exists for the same `(position, type)`,
+        the new record is created in `draft` state — the archive of the prior active
+        row happens **only after** the bytes arrive (atomically inside the upload
+        transaction). This avoids leaving the position document-less if the client
+        abandons the upload.
+      parameters:
+        - in: path
+          name: clientId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: posId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDocumentRequest"
+      responses:
+        "201":
+          description: Document record created; client should POST bytes next.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateDocumentResponse"
+        "400":
+          description: Invalid type / mime / size
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "403":
+          description: Role does not allow create
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "404":
+          description: Position not found / not in tenant / not assigned
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+
+  /clients/{clientId}/positions/{posId}/documents/{docId}/upload:
+    post:
+      summary: Upload bytes for a previously-created document (step 2 of 2)
+      description: |
+        Receives the raw binary in the request body. The Worker:
+          1. Re-validates MIME + size from request headers + accumulated body.
+          2. Inside one DB transaction with `SET LOCAL app.tenant_id`:
+             a. archives any prior active document of the same `(position, type)`,
+             b. sets `uploaded_at = now()` and confirms `is_active = true` on this row,
+             c. emits the `position_document.create` or `.replace` audit event.
+          3. After commit: calls `FILES.put(storageKey, body, { httpMetadata })`.
+
+        On retry, the same `:docId` overwrites the same R2 key idempotently
+        (research §R11). If the JWT expires mid-upload, the client refreshes and
+        re-issues the same call.
+      parameters:
+        - in: path
+          name: clientId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: posId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: docId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/pdf: { schema: { type: string, format: binary } }
+          application/msword: { schema: { type: string, format: binary } }
+          application/vnd.openxmlformats-officedocument.wordprocessingml.document: { schema: { type: string, format: binary } }
+      responses:
+        "200":
+          description: Upload completed; document is now active.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/PositionDocumentDto"
+        "404":
+          description: Document record not found / wrong tenant
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "409":
+          description: Concurrent winner already inserted; retry from POST /documents
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "422":
+          description: MIME / size violation detected during streaming
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+
+  /clients/{clientId}/positions/{posId}/documents/{docId}/download:
+    get:
+      summary: Stream the document bytes (active or — for admins — archived)
+      description: |
+        Streams the requested document. Recruiter, AE, manager, and admin roles
+        may download active documents on positions in clients they have access
+        to. Only admin may download an archived (`is_active=false`) document via
+        this endpoint — for non-admins requesting an archived row the response is
+        404 (uniform not-found per FR-016).
+      parameters:
+        - in: path
+          name: clientId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: posId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: docId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK; body is the file. `Content-Disposition: attachment` includes the original file name.
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+            application/msword: { schema: { type: string, format: binary } }
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document: { schema: { type: string, format: binary } }
+        "404":
+          description: Not found / wrong tenant / unassigned client / archived doc and operator is not admin
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+
+    delete:
+      summary: Soft-delete an active document (admin only — extraordinary case)
+      description: |
+        Sets `is_active = false` and `replaced_at = now()` on the active document
+        without registering a successor. Audit `position_document.delete` is
+        emitted. Recruiter / AE / manager cannot reach this path; replacement is
+        the normal flow.
+      parameters:
+        - in: path
+          name: clientId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: posId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: docId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Soft-deleted
+        "403":
+          description: Operator not admin
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "404":
+          description: Not found / wrong tenant
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+
+  /clients/{clientId}/positions/{posId}/documents/history:
+    get:
+      summary: List archived versions for the position (admin-only history panel — FR-018)
+      description: |
+        Returns the full history of archived (`is_active=false`) documents for
+        the position, ordered by `replaced_at desc`. Admin only — server-side
+        `requireRole("admin")`. Other roles get 403 (not 404) because this
+        endpoint's existence is not sensitive — only the data is.
+      parameters:
+        - in: path
+          name: clientId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: posId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: query
+          name: type
+          required: false
+          schema:
+            $ref: "#/components/schemas/DocumentType"
+          description: When provided, scopes the listing to one document type.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PositionDocumentDto"
+        "403":
+          description: Operator not admin
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "404":
+          description: Position not found / wrong tenant
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }

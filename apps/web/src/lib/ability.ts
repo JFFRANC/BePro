@@ -2,7 +2,19 @@ import { AbilityBuilder, createMongoAbility, type MongoAbility } from "@casl/abi
 import type { UserRole } from "@bepro/shared";
 
 export type Actions = "manage" | "create" | "read" | "update" | "delete";
-export type Subjects = "Dashboard" | "Candidate" | "Client" | "Placement" | "User" | "Audit" | "all";
+// 011-puestos-profile-docs — `Position`, `PositionDocument`, y `Position.history`
+// (admin-only Versiones panel).
+export type Subjects =
+  | "Dashboard"
+  | "Candidate"
+  | "Client"
+  | "Placement"
+  | "User"
+  | "Audit"
+  | "Position"
+  | "PositionDocument"
+  | "Position.history"
+  | "all";
 export type AppAbility = MongoAbility<[Actions, Subjects]>;
 
 interface AbilityUser {
@@ -22,21 +34,30 @@ export function defineAbilityFor(user: AbilityUser): AppAbility {
       // may create candidates. Admins retain read/update (and reactivate), but
       // the "Nuevo candidato" entry point is hidden via this cannot() rule.
       cannot("create", "Candidate");
+      // 011 — admin ve "Versiones" (FR-018)
+      can("read", "Position.history");
       break;
     case "manager":
       can("read", "all");
-      can("update", ["Candidate", "Placement"]);
-      can("create", "Placement");
+      can("update", ["Candidate", "Placement", "Position", "PositionDocument"]);
+      can("create", ["Placement", "Position", "PositionDocument"]);
       // FR-CG-002 — managers cannot create candidates either.
       break;
     case "account_executive":
-      can("read", ["Dashboard", "Candidate", "Client", "Placement"]);
-      can("update", ["Candidate", "Placement"]);
-      can("create", "Placement");
+      can("read", [
+        "Dashboard",
+        "Candidate",
+        "Client",
+        "Placement",
+        "Position",
+        "PositionDocument",
+      ]);
+      can("update", ["Candidate", "Placement", "Position", "PositionDocument"]);
+      can("create", ["Placement", "Position", "PositionDocument"]);
       // FR-CG-002 — AEs cannot create candidates.
       break;
     case "recruiter":
-      can("read", ["Dashboard", "Candidate"]);
+      can("read", ["Dashboard", "Candidate", "Position", "PositionDocument"]);
       can("create", "Candidate");
       break;
   }

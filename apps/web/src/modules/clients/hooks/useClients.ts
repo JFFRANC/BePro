@@ -18,11 +18,18 @@ import {
   deleteContact,
   createPosition,
   listPositions,
+  getPosition,
   updatePosition,
   deletePosition,
-  uploadDocument,
-  listDocuments,
-  deleteDocument,
+  // 011-puestos-profile-docs — perfil + documents (los hooks legacy de
+  // documentos a nivel cliente se removieron en US3).
+  type ICreatePositionRequest,
+  type IUpdatePositionRequest,
+  createPositionDocument,
+  uploadPositionDocumentBytes,
+  downloadPositionDocument,
+  softDeletePositionDocument,
+  listArchivedPositionDocuments,
 } from "../services/clientService";
 import type {
   ICreateClientRequest,
@@ -30,8 +37,8 @@ import type {
   IAssignUserRequest,
   ICreateContactRequest,
   IUpdateContactRequest,
-  ICreatePositionRequest,
-  IUpdatePositionRequest,
+  CreatePositionDocumentInput,
+  PositionDocumentType,
 } from "@bepro/shared";
 
 export const CLIENT_KEYS = {
@@ -237,6 +244,15 @@ export function usePositions(clientId: string, includeInactive = false) {
   });
 }
 
+// 011 — single position fetch (detalle / edición)
+export function usePosition(clientId: string, positionId: string | undefined) {
+  return useQuery({
+    queryKey: [...CLIENT_KEYS.positions(clientId), "detail", positionId],
+    queryFn: () => getPosition(clientId, positionId!),
+    enabled: !!clientId && !!positionId,
+  });
+}
+
 export function useCreatePosition(clientId: string) {
   const queryClient = useQueryClient();
 
@@ -274,37 +290,87 @@ export function useDeletePosition(clientId: string) {
   });
 }
 
-// -- Documents --
+// -- Position documents (011 / US2) --
 
-export function useDocuments(clientId: string) {
+export function useUploadPositionDocument(clientId: string, positionId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      file,
+      type,
+    }: {
+      file: File;
+      type: PositionDocumentType;
+    }) => {
+      const input: CreatePositionDocumentInput = {
+        type,
+        originalName: file.name,
+        mimeType: file.type as CreatePositionDocumentInput["mimeType"],
+        sizeBytes: file.size,
+      };
+      const record = await createPositionDocument(clientId, positionId, input);
+      return await uploadPositionDocumentBytes(
+        clientId,
+        positionId,
+        record.id,
+        file,
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...CLIENT_KEYS.positions(clientId), "detail", positionId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: CLIENT_KEYS.positions(clientId),
+      });
+    },
+  });
+}
+
+export function useSoftDeletePositionDocument(
+  clientId: string,
+  positionId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (documentId: string) =>
+      softDeletePositionDocument(clientId, positionId, documentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...CLIENT_KEYS.positions(clientId), "detail", positionId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: CLIENT_KEYS.positions(clientId),
+      });
+    },
+  });
+}
+
+export function useArchivedPositionDocuments(
+  clientId: string,
+  positionId: string,
+  type?: PositionDocumentType,
+  enabled = true,
+) {
   return useQuery({
-    queryKey: CLIENT_KEYS.documents(clientId),
-    queryFn: () => listDocuments(clientId),
-    enabled: !!clientId,
+    queryKey: [
+      ...CLIENT_KEYS.positions(clientId),
+      "detail",
+      positionId,
+      "history",
+      { type },
+    ],
+    queryFn: () => listArchivedPositionDocuments(clientId, positionId, type),
+    enabled: enabled && !!clientId && !!positionId,
   });
 }
 
-export function useUploadDocument(clientId: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ file, documentType }: { file: File; documentType: string }) =>
-      uploadDocument(clientId, file, documentType),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: CLIENT_KEYS.documents(clientId) });
-      queryClient.invalidateQueries({ queryKey: CLIENT_KEYS.detail(clientId) });
-    },
-  });
-}
-
-export function useDeleteDocument(clientId: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (documentId: string) => deleteDocument(clientId, documentId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: CLIENT_KEYS.documents(clientId) });
-      queryClient.invalidateQueries({ queryKey: CLIENT_KEYS.detail(clientId) });
-    },
-  });
+// Helper hook for inline downloads (icon click etc.)
+export function downloadPositionDocumentClient(
+  clientId: string,
+  positionId: string,
+  documentId: string,
+  fileName: string,
+) {
+  return downloadPositionDocument(clientId, positionId, documentId, fileName);
 }
