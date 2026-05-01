@@ -125,6 +125,14 @@ export function App() {
                       <Route path="/users/:id" element={<UserDetailPage />} />
                       <Route path="/clients" element={<ClientsPage />} />
                       <Route path="/clients/:id" element={<ClientDetailPage />} />
+                      {/* 012-client-detail-ux / FR-008 — defensive redirect:
+                          legacy `/config` segmento. Renderiza la misma página;
+                          el efecto interno hace navigate-replace a `/clients/:id`
+                          y selecciona la pestaña "form". */}
+                      <Route
+                        path="/clients/:id/config"
+                        element={<ClientDetailPage />}
+                      />
                       <Route
                         path="/clients/:id/positions/:posId"
                         element={<PositionDetailPage />}

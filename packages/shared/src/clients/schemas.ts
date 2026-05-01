@@ -1,6 +1,11 @@
 // 008-ux-roles-refinements — Zod schemas for client-scoped features
 // (batch assignments, form-config custom fields).
 import { z } from "zod";
+// 012-client-detail-ux / FR-010 — defense in depth contra colisiones con
+// los campos base. La regex actual ya rechaza camelCase (los keys base son
+// camelCase), pero el set protege ante (a) la ruta `legacy_<key>` post-migración
+// y (b) cualquier futura relajación de la regex.
+import { BASE_FIELD_KEY_SET, type BaseFieldKey } from "../candidates/base-fields.js";
 
 const uuidSchema = z.string().uuid();
 
@@ -100,6 +105,11 @@ const fieldKeySchema = z
   })
   .refine((k) => !LEGACY_FORM_CONFIG_KEYS.has(k), {
     message: "La clave colisiona con un toggle legacy reservado.",
+  })
+  // 012-client-detail-ux / FR-010 — colisión con campos base.
+  .refine((k) => !BASE_FIELD_KEY_SET.has(k as BaseFieldKey), {
+    message:
+      "La clave colisiona con un campo base del formulario de candidatos. Renómbrala.",
   });
 
 export const FORM_CONFIG_FIELD_TYPES = [

@@ -50,6 +50,7 @@ export function ContactDirectory({ clientId, readOnly = false }: ContactDirector
           <TableHeader>
             <TableRow>
               <TableHead>Nombre</TableHead>
+              <TableHead>Puesto</TableHead>
               <TableHead>Teléfono</TableHead>
               <TableHead>Email</TableHead>
               {!readOnly && <TableHead className="w-24" />}
@@ -67,6 +68,7 @@ export function ContactDirectory({ clientId, readOnly = false }: ContactDirector
               Array.from({ length: 3 }).map((_, i) => (
                 <TableRow key={i}>
                   <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-36" /></TableCell>
                   {!readOnly && <TableCell><Skeleton className="h-8 w-16" /></TableCell>}
@@ -74,7 +76,7 @@ export function ContactDirectory({ clientId, readOnly = false }: ContactDirector
               ))
             ) : !contacts?.length && !showAddForm ? (
               <TableRow>
-                <TableCell colSpan={readOnly ? 3 : 4} className="h-32 p-0">
+                <TableCell colSpan={readOnly ? 4 : 5} className="h-32 p-0">
                   <EmptyState
                     icon={Contact}
                     title="Sin contactos"
@@ -93,8 +95,15 @@ export function ContactDirectory({ clientId, readOnly = false }: ContactDirector
                     onCancel={() => setEditingId(null)}
                   />
                 ) : (
-                  <TableRow key={contact.id}>
+                  <TableRow key={contact.id} data-testid={`contact-row-${contact.id}`}>
                     <TableCell className="font-medium">{contact.name}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {contact.position && contact.position.length > 0 ? (
+                        contact.position
+                      ) : (
+                        <span className="text-muted-foreground/60">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-muted-foreground">{contact.phone}</TableCell>
                     <TableCell className="text-muted-foreground">{contact.email}</TableCell>
                     {!readOnly && (
@@ -161,6 +170,15 @@ function AddContactRow({
         <Input placeholder="Nombre" {...register("name")} error={!!errors.name} className="h-8" />
       </TableCell>
       <TableCell>
+        <Input
+          placeholder="Puesto (opcional)"
+          aria-label="Puesto"
+          {...register("position")}
+          error={!!errors.position}
+          className="h-8"
+        />
+      </TableCell>
+      <TableCell>
         <Input placeholder="5512345678" {...register("phone")} error={!!errors.phone} className="h-8" />
       </TableCell>
       <TableCell>
@@ -198,6 +216,7 @@ function EditContactRow({
       name: contact.name,
       phone: contact.phone,
       email: contact.email,
+      position: contact.position ?? "",
     },
   });
 
@@ -215,6 +234,14 @@ function EditContactRow({
     <TableRow>
       <TableCell>
         <Input {...register("name")} className="h-8" />
+      </TableCell>
+      <TableCell>
+        <Input
+          {...register("position")}
+          aria-label="Puesto"
+          placeholder="Puesto (opcional)"
+          className="h-8"
+        />
       </TableCell>
       <TableCell>
         <Input {...register("phone")} className="h-8" />

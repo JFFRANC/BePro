@@ -22,6 +22,7 @@ export interface CreateClientInput {
   address?: string;
   latitude?: number;
   longitude?: number;
+  description?: string;
   formConfig?: IClientFormConfig;
 }
 
@@ -33,6 +34,7 @@ export interface UpdateClientInput {
   latitude?: number | null;
   longitude?: number | null;
   isActive?: boolean;
+  description?: string | null;
   formConfig?: IClientFormConfig;
 }
 

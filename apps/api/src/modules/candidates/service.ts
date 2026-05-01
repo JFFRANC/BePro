@@ -16,6 +16,7 @@ import {
   candidates,
   candidateDuplicateLinks,
   clientAssignments,
+  clientPositions,
   clients,
   privacyNotices,
   users,
@@ -23,7 +24,10 @@ import {
 } from "@bepro/db";
 import type { Database } from "@bepro/db";
 import {
+  BASE_CANDIDATE_FIELDS,
+  BASE_FIELD_KEY_SET,
   buildDynamicSchema,
+  type BaseFieldKey,
   type CandidateStatus,
   type ICandidateDetail,
   type ICandidateListItem,
@@ -71,6 +75,32 @@ export class ClientNotFoundError extends Error {
   constructor() {
     super("Cliente no encontrado o inactivo en este tenant.");
     this.name = "ClientNotFoundError";
+  }
+}
+
+// 012-client-detail-ux / FR-011 — fail-closed cuando el `formConfig` del
+// tenant perdió un campo base (post-tampering o tenant pre-migración).
+export class FormConfigTamperedError extends Error {
+  readonly code = "form_config_tampered" as const;
+  constructor(
+    public readonly tenantId: string,
+    public readonly clientId: string,
+    public readonly missingBaseKeys: BaseFieldKey[],
+  ) {
+    super(
+      "Los campos base del candidato no están en el formConfig del cliente. " +
+        "Re-ejecuta scripts/012-rename-legacy-formconfig-collisions.ts para este tenant.",
+    );
+    this.name = "FormConfigTamperedError";
+  }
+}
+
+// 012 / R-07 — positionId del payload no pertenece al catálogo activo del cliente.
+export class InvalidPositionError extends Error {
+  readonly code = "invalid_position" as const;
+  constructor() {
+    super("El puesto seleccionado no existe en este cliente.");
+    this.name = "InvalidPositionError";
   }
 }
 
@@ -233,13 +263,68 @@ export async function createCandidate(
     }
   }
 
-  // 3) Validar additional_fields contra el form_config del cliente (R7 / FR-012).
-  //    El schema dinámico es vacío si formConfig no tiene `fields[]`, por lo que
-  //    los tenants que aún usan el formato legacy de flags no rompen.
-  const dynamicSchema = buildDynamicSchema(client.formConfig as never);
+  // 3) Construir effective formConfig = BASE_CANDIDATE_FIELDS ∪ formConfig.fields[]
+  //    (012-client-detail-ux / FR-009, FR-011, FR-012). El merge mete BASE
+  //    primero; los custom que colisionen por key se ignoran (post-migración
+  //    no debería haber ninguno; defensa en profundidad).
+  const customFields = Array.isArray((client.formConfig as { fields?: unknown[] })?.fields)
+    ? (client.formConfig as { fields?: { key: string }[] }).fields ?? []
+    : [];
+  const effectiveFields: { key: string; label: string; type: string; required?: boolean; options?: string[] | null }[] = [
+    ...BASE_CANDIDATE_FIELDS.map((b) => ({
+      key: b.key,
+      label: b.label,
+      type: b.type,
+      required: b.required,
+      // positionId es select pero las opciones se resuelven en runtime contra
+      // client_positions; aquí dejamos undefined para que buildDynamicSchema
+      // lo trate como string libre (la FK se valida en el paso 3.5).
+      options: undefined as string[] | null | undefined,
+    })),
+    ...customFields
+      .filter((f) => !BASE_FIELD_KEY_SET.has(f.key as BaseFieldKey))
+      .map((f) => f as never),
+  ];
+
+  // 3.1) Defensa en profundidad: el effective DEBE contener cada base key.
+  //      Si alguien forzó `formConfig.fields[]` con una entrada que sobrescribe
+  //      una base, el filtrado de arriba ya la dropeó — pero verificamos.
+  const effectiveKeys = new Set(effectiveFields.map((f) => f.key));
+  const missingBaseKeys = BASE_CANDIDATE_FIELDS
+    .map((b) => b.key as BaseFieldKey)
+    .filter((k) => !effectiveKeys.has(k));
+  if (missingBaseKeys.length > 0) {
+    throw new FormConfigTamperedError(ctx.tenantId, input.client_id, missingBaseKeys);
+  }
+
+  // 3.2) Validar additional_fields con el schema dinámico construido sobre
+  //      el effective config. Esto fuerza que los 9 valores base estén presentes.
+  const dynamicSchema = buildDynamicSchema({ fields: effectiveFields } as never);
   const dynamicResult = dynamicSchema.safeParse(input.additional_fields ?? {});
   if (!dynamicResult.success) {
     throw new FormConfigValidationError(dynamicResult.error.issues);
+  }
+
+  // 3.3) FK aplicativa para positionId (R-07): el id debe corresponder a un
+  //      `client_positions` activo del MISMO cliente. RLS ya filtra por tenant.
+  const positionId = (input.additional_fields ?? {})["positionId"] as
+    | string
+    | undefined;
+  if (positionId) {
+    const [pos] = await db
+      .select({ id: clientPositions.id })
+      .from(clientPositions)
+      .where(
+        and(
+          eq(clientPositions.id, positionId),
+          eq(clientPositions.clientId, input.client_id),
+          eq(clientPositions.isActive, true),
+        ),
+      )
+      .limit(1);
+    if (!pos) {
+      throw new InvalidPositionError();
+    }
   }
 
   // 4) Detección de duplicados (R2 / FR-014).

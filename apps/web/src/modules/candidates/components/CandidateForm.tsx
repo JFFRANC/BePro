@@ -6,8 +6,11 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
+  BASE_CANDIDATE_FIELDS,
+  BASE_FIELD_KEY_SET,
   buildDynamicSchema,
   registerCandidateRequestSchema,
+  type BaseFieldKey,
   type FormFieldConfig,
 } from "@bepro/shared";
 
@@ -94,16 +97,49 @@ function legacyTogglesToFields(
   return out;
 }
 
+// 012-client-detail-ux / FR-009 — BASE_CANDIDATE_FIELDS go first; admin custom
+// + legacy toggles follow. positionId's options are resolved per-call from the
+// client's active `client_positions`.
 function resolveAllFields(
   config: ClientFormConfigShape | null | undefined,
+  positionOptions: { value: string; label: string }[] = [],
 ): FormFieldConfig[] {
-  const fromToggles = legacyTogglesToFields(config);
-  const fromAdmin = (config?.fields ?? []).filter((f) => !("archived" in f) || !(f as FormFieldConfig & { archived?: boolean }).archived);
-  // Admin-managed fields override legacy toggles on key collision (edge case).
-  const seen = new Set(fromAdmin.map((f) => f.key));
-  const merged = [...fromAdmin];
-  for (const f of fromToggles) {
-    if (!seen.has(f.key)) merged.push(f);
+  const baseFields: FormFieldConfig[] = BASE_CANDIDATE_FIELDS.map((b) => {
+    if (b.key === "positionId") {
+      // Sentinel — empty options array makes buildDynamicSchema treat it as a
+      // free string. We render the Select with the resolved client positions
+      // in `renderDynamicInput`, looking up the dropdown options from props.
+      return {
+        key: b.key,
+        label: b.label,
+        type: "select" as const,
+        required: true,
+        options: positionOptions.map((p) => p.value),
+      };
+    }
+    return {
+      key: b.key,
+      label: b.label,
+      type: b.type as FormFieldConfig["type"],
+      required: true,
+    };
+  });
+
+  const fromToggles = legacyTogglesToFields(config).filter(
+    (f) => !BASE_FIELD_KEY_SET.has(f.key as BaseFieldKey),
+  );
+  const fromAdmin = (config?.fields ?? [])
+    .filter((f) => !("archived" in f) || !(f as FormFieldConfig & { archived?: boolean }).archived)
+    .filter((f) => !BASE_FIELD_KEY_SET.has(f.key as BaseFieldKey));
+
+  // Order: BASE → admin → legacy toggles. Dedupe by key (keep first occurrence).
+  const merged: FormFieldConfig[] = [];
+  const seen = new Set<string>();
+  for (const f of [...baseFields, ...fromAdmin, ...fromToggles]) {
+    if (!seen.has(f.key)) {
+      merged.push(f);
+      seen.add(f.key);
+    }
   }
   return merged;
 }
@@ -119,16 +155,30 @@ export interface CandidateFormValues {
   additional_fields: Record<string, unknown>;
 }
 
+// 012-client-detail-ux / FR-009 — opciones del Select positionId.
+export interface PositionOption {
+  value: string; // client_positions.id
+  label: string; // nombre del puesto
+}
+
 interface CandidateFormProps {
   clientId: string;
   formConfig: ClientFormConfigShape | null | undefined;
   defaultValues?: Partial<CandidateFormValues>;
   formId?: string;
   onValidSubmit: (values: CandidateFormValues) => void;
+  // 012 — opciones del Select positionId; vacío si el cliente no tiene puestos.
+  positionOptions?: PositionOption[];
+  // 012 / FR-015 — prefills opcionales para los campos base.
+  recruiterName?: string;
+  accountExecutiveName?: string;
 }
 
-function buildFullSchema(formConfig: ClientFormConfigShape | null | undefined) {
-  const allFields = resolveAllFields(formConfig);
+function buildFullSchema(
+  formConfig: ClientFormConfigShape | null | undefined,
+  positionOptions: PositionOption[] = [],
+) {
+  const allFields = resolveAllFields(formConfig, positionOptions);
   const dynamic = buildDynamicSchema(
     allFields.length > 0 ? { fields: allFields } : null,
   );
@@ -160,9 +210,24 @@ export function CandidateForm({
   defaultValues,
   formId = "candidate-form",
   onValidSubmit,
+  positionOptions = [],
+  recruiterName,
+  accountExecutiveName,
 }: CandidateFormProps) {
-  const schema = useMemo(() => buildFullSchema(formConfig), [formConfig]);
+  const schema = useMemo(
+    () => buildFullSchema(formConfig, positionOptions),
+    [formConfig, positionOptions],
+  );
   const firstFieldRef = useRef<HTMLInputElement | null>(null);
+
+  // 012 / FR-015 — prefill recruiterName + accountExecutiveName en additional_fields.
+  // Si el caller pasa defaultValues.additional_fields tienen prioridad.
+  const baseDefaults = useMemo<Record<string, unknown>>(() => {
+    const af: Record<string, unknown> = {};
+    if (recruiterName) af.recruiterName = recruiterName;
+    if (accountExecutiveName) af.accountExecutiveName = accountExecutiveName;
+    return af;
+  }, [recruiterName, accountExecutiveName]);
 
   const form = useForm<CandidateFormValues>({
     resolver: zodResolver(schema as never),
@@ -176,7 +241,10 @@ export function CandidateForm({
       email: "",
       current_position: "",
       source: "",
-      additional_fields: {},
+      additional_fields: {
+        ...baseDefaults,
+        ...(defaultValues?.additional_fields ?? {}),
+      },
       ...defaultValues,
     },
   });
@@ -190,8 +258,12 @@ export function CandidateForm({
     firstFieldRef.current?.focus();
   }, []);
 
-  // 008 FR-FC-005 — union of admin-managed `fields[]` plus the 8 legacy toggles.
-  const fields = useMemo(() => resolveAllFields(formConfig), [formConfig]);
+  // 012 / 008 FR-FC-005 — union of BASE_CANDIDATE_FIELDS + admin custom `fields[]`
+  // + legacy toggles. Base goes first.
+  const fields = useMemo(
+    () => resolveAllFields(formConfig, positionOptions),
+    [formConfig, positionOptions],
+  );
   const errors = form.formState.errors;
   // Calculamos los entries en cada render — son baratos (≤ ~10 campos) y evitamos
   // useMemo para no crear una clave de dependencia inestable a partir de objetos
@@ -370,7 +442,7 @@ export function CandidateForm({
       {fields.length > 0 ? (
         <fieldset className="space-y-4 border-0 p-0 m-0">
           <legend className="text-sm font-medium mb-2">
-            Datos adicionales del cliente
+            Datos del candidato (campos base + adicionales del cliente)
           </legend>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {fields.map((field) => {
@@ -390,6 +462,7 @@ export function CandidateForm({
                     field,
                     form,
                     `additional_fields.${field.key}`,
+                    field.key === "positionId" ? positionOptions : undefined,
                   )}
                 </FieldGroup>
               );
@@ -448,6 +521,8 @@ function renderDynamicInput(
   field: FormFieldConfig,
   form: ReturnType<typeof useForm<CandidateFormValues>>,
   name: string,
+  // 012 / FR-009 — para positionId, render con label≠value.
+  positionOptions?: PositionOption[],
 ) {
   const id = `af_${field.key}`;
   switch (field.type) {
@@ -479,7 +554,12 @@ function renderDynamicInput(
           {...form.register(name as never)}
         />
       );
-    case "select":
+    case "select": {
+      // 012 — si hay positionOptions explícitas (positionId), label≠value.
+      const renderOptions: { value: string; label: string }[] =
+        positionOptions && positionOptions.length > 0
+          ? positionOptions
+          : (field.options ?? []).map((o) => ({ value: o, label: o }));
       return (
         <Controller
           control={form.control}
@@ -493,9 +573,9 @@ function renderDynamicInput(
                 <SelectValue placeholder="Selecciona…" />
               </SelectTrigger>
               <SelectContent>
-                {(field.options ?? []).map((opt) => (
-                  <SelectItem key={opt} value={opt}>
-                    {opt}
+                {renderOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -503,6 +583,7 @@ function renderDynamicInput(
           )}
         />
       );
+    }
     case "checkbox":
       return (
         <Controller

@@ -4,6 +4,7 @@ import { createClientSchema } from "@bepro/shared";
 import { z } from "zod";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useCreateClient, useUpdateClient } from "../hooks/useClients";
@@ -14,6 +15,8 @@ import type { IClientDto } from "@bepro/shared";
 
 const clientBasicSchema = createClientSchema.omit({ formConfig: true });
 type ClientBasicFormValues = z.infer<typeof clientBasicSchema>;
+
+const DESCRIPTION_MAX_LENGTH = 2000;
 
 interface ClientFormProps {
   client?: IClientDto;
@@ -40,12 +43,14 @@ export function ClientForm({ client, onSuccess, onCancel }: ClientFormProps) {
       address: client?.address ?? "",
       latitude: client?.latitude,
       longitude: client?.longitude,
+      description: client?.description ?? "",
     },
   });
 
   const latitude = watch("latitude");
   const longitude = watch("longitude");
   const address = watch("address");
+  const description = watch("description") ?? "";
 
   const onSubmit = async (data: ClientBasicFormValues) => {
     setServerError(null);
@@ -113,6 +118,34 @@ export function ClientForm({ client, onSuccess, onCancel }: ClientFormProps) {
             }
           }}
         />
+      </div>
+
+      {/* 012-client-detail-ux / FR-001 — descripción libre. Plain text en
+          la UI; markdown se muestra literal. */}
+      <div>
+        <Label htmlFor="description" className="mb-1">
+          Descripción
+        </Label>
+        <Textarea
+          id="description"
+          placeholder="Notas internas: industria, contactos clave, particularidades del cliente…"
+          rows={5}
+          maxLength={DESCRIPTION_MAX_LENGTH}
+          aria-invalid={!!errors.description || undefined}
+          {...register("description")}
+        />
+        <div className="mt-1 flex justify-between text-xs text-muted-foreground">
+          <span>
+            {errors.description ? (
+              <span className="text-destructive">{errors.description.message}</span>
+            ) : (
+              "Opcional · texto plano · se muestra tal cual al equipo."
+            )}
+          </span>
+          <span aria-live="polite">
+            {description.length}/{DESCRIPTION_MAX_LENGTH}
+          </span>
+        </div>
       </div>
 
       {serverError && (

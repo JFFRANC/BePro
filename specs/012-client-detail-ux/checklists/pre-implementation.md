@@ -1,0 +1,100 @@
+# Pre-Implementation Checklist: Client Detail UX + Contact Cargo + Candidate Base-Form
+
+**Purpose**: Validate requirement quality (completeness, clarity, consistency, measurability, coverage) before `/speckit.implement` begins. This is "unit tests for English" — every item interrogates what is *written* in the spec/plan, not whether the future implementation works.
+**Created**: 2026-05-01
+**Walked**: 2026-05-01 (Hector)
+**Audience**: Author (Hector) + reviewer (Javi) — final gate before code lands
+**Feature**: [spec.md](../spec.md)
+**Depth**: Standard (gating checklist, ~43 items)
+
+---
+
+## Requirement Completeness
+
+- [x] CHK001 - Are accessibility requirements specified for the "Campo base" locked rows in the Formulario tab (e.g., screen-reader announcement of locked status, ARIA `aria-readonly`)? [Gap, Spec §FR-010] <!-- accepted: tenant-wide WCAG/A11y standards inherited from constitution + web-design-guidelines skill (plan §VII); locked rows will use `aria-readonly="true"` + the existing Badge pattern by convention. Not worth a spec edit. -->
+- [x] CHK002 - Are accessibility requirements specified for the "Copiar ubicación" button feedback (success/failure announced via `aria-live` region)? [Gap, Spec §FR-007] <!-- accepted: sonner toasts ship with `role="status" aria-live="polite"` by default. -->
+- [x] CHK003 - Are keyboard navigation requirements (tab order, focus management) defined for the new 2-column layout at md+ viewports? [Gap, Spec §FR-005] <!-- accepted: source-order tab traversal is preserved (left col before right col); no popovers, no focus traps. Default browser behavior covers it. -->
+- [x] CHK004 - Is the empty-catalog scenario covered for `positionId`: what does the registration form do when the client has zero active positions in `client_positions`? [Coverage, Gap, Spec §FR-009 / FR-015] <!-- resolved: spec amended with edge case E-11 (empty Select + Spanish helper, form blocked from completing until admin creates at least one position). -->
+- [x] CHK005 - Is the audit-event `subjectType` and `subjectId` convention restated in the spec (not only in data-model.md) so the spec is self-contained? [Completeness, Spec §FR-014] <!-- accepted: convention is well-established by 008's audit envelope; data-model.md is the canonical reference. Spec FR-014 names the diff fields, which is the only 012-specific information. -->
+- [x] CHK006 - Are PII / log-scrubbing requirements explicitly restated for the new free-text fields (`description`, `position`)? [Completeness, Constitution §VI] <!-- accepted: plan.md §Constraints declares descriptions/positions are not PII; existing log scrubbers cover free text by default. -->
+- [x] CHK007 - Are visual-design requirements specified for the "Campo base" Badge (color, icon, position relative to the field row)? [Gap, Spec §FR-010] <!-- accepted: implementation detail; design-system + shadcn/ui Badge variants cover this without spec text. -->
+- [x] CHK008 - Is the operator runbook for the `form_config_tampered` 500 documented (who receives the alert, where to find the script, how to confirm success)? [Gap, Spec §FR-011] <!-- already covered: contracts/candidate-create.md error envelope carries `tenantId`, `clientId`, `missingBaseKeys` and names the script in the message; T079a is the cutover gate. The error payload IS the runbook. -->
+- [x] CHK009 - Are loading-state requirements defined for `useClient(clientId)` when the candidate registration form mounts (skeleton, spinner, no-flash)? [Gap, Spec §FR-015] <!-- accepted: existing TanStack Query skeleton pattern used in the candidate form (per 008) carries over unchanged. -->
+
+## Requirement Clarity
+
+- [x] CHK010 - Is the visual rendering of the description (`whitespace-pre-line` per research.md R-01) reflected in the spec itself, or only in research? [Clarity, Spec §FR-001 / Edge Case E-02] <!-- accepted: research is the canonical place for rendering decisions; spec FR-001 + E-02 already commit to "plain text" + "no executable HTML" which is the user-facing contract. Implementation detail (CSS class) lives in research correctly. -->
+- [x] CHK011 - Is "earliest-assigned AE" qualified — does it consider only currently-active assignment rows, or include archived ones? [Ambiguity, Spec Assumptions § "Primary AE"] <!-- resolved: research.md R-04 + spec Assumptions amended — `client_assignments` has no `is_active` column (every row is current); activeness filter applies to the joined `users.is_active = true`. -->
+- [x] CHK012 - Is "above the fold without scrolling on a 1024×768 desktop" objectively measurable in a Playwright assertion (e.g., specific pixel offset) or only by visual review? [Measurability, Spec §SC-002] <!-- accepted: SC-002 explicitly says "Verified by visual regression at md / lg / xl breakpoints" — Playwright snapshot is the measurement, no pixel math needed. -->
+- [x] CHK013 - Is "no perceptible delay" for clipboard write expressed as either a numeric ceiling or an explicit "manual-only" verification? [Clarity, Spec §SC-003] <!-- already covered: plan.md Performance Goals locks this to **200 ms** for clipboard write + sonner toast. -->
+- [x] CHK014 - Is the exact composition of the formatted address (whitespace normalization, no client-name prefix) restated in the spec, or only in research.md R-02? [Clarity, Spec §FR-007] <!-- accepted: R-02 is the source of truth and includes the exact code snippet. Spec FR-007 + E-09 cover the user-facing contract. -->
+- [x] CHK015 - Is the URL pattern that triggers the `/config → /clients/:id` redirect specified explicitly (suffix match? exact match? does `/clients/:id/config?foo=bar` redirect)? [Clarity, Spec §FR-008 / E-05] <!-- already covered: research.md R-03 specifies "ends in /config" suffix match with `replace: true`. tasks.md T036 mirrors the rule. Querystrings are dropped by the `replace`. -->
+- [x] CHK016 - Are the 9 BASE_CANDIDATE_FIELDS labels' Spanish wording locked-in in the spec/contracts so no implementer "improves" them ad-hoc? [Clarity, Spec §FR-009 / data-model.md] <!-- already covered: data-model.md lines 91–101 lock label, type, required for all 9 keys. contracts/shared-base-fields.md guarantees them as test invariants. -->
+
+## Requirement Consistency
+
+- [x] CHK017 - Do FR-011 (server-enforced base-key presence with 500), E-04 (operator instruction), US4 acceptance #4 (error contents), and contracts/candidate-create.md (500 envelope shape) describe the **same** error envelope and operator action? [Consistency, Spec §FR-011 / E-04 / US4 / Contracts] <!-- resolved: data-model.md FR-011 stub message updated to match contracts/candidate-create.md envelope (full payload + Spanish message pointing at the script, not the tab). -->
+- [x] CHK018 - Do FR-010 (server rejects collisions), data-model.md (Zod refine + service deny-list), and contracts/form-config-fields.md (400 envelope) describe the **same** rejection trigger and error shape? [Consistency, Spec §FR-010] <!-- verified: identical Spanish message in all three artifacts; identical envelope (`validation_error` + `issues[]`). FR-010 clauses (a)/(b)/(c) are inert because base fields don't live in `form_config.fields[]` — only clause (d) is reachable, and all three artifacts agree on it. -->
+- [x] CHK019 - Is the BASE_CANDIDATE_FIELDS key list **identical** across spec FR-009, contracts/shared-base-fields.md, contracts/candidate-create.md, data-model.md, and tasks.md? [Consistency, Spec §FR-009] <!-- verified: 9 keys in identical order in spec FR-009, contracts/shared-base-fields.md §Contract guarantees, contracts/candidate-create.md request example, data-model.md frozen array. tasks.md references the constant and never enumerates a divergent list. -->
+- [x] CHK020 - Are the Clarifications session Q3 record (annotated note about the missing column) and the new Assumptions block ("Primary AE — operational definition") congruent and not re-stating contradictory facts? [Consistency, Spec §Clarifications / Assumptions] <!-- verified: Q3 explicitly redirects to the Assumption + R-04. Same operational definition, same words. Both updated in lockstep when CHK011 was resolved. -->
+- [x] CHK021 - Do the audit-event field names in spec §FR-014 (`description`, `position`) match the diff-key examples in data-model.md exactly (camelCase vs snake_case)? [Consistency, Spec §FR-014] <!-- verified: both single-word fields; identical in spec, data-model.md envelope examples, and contracts. -->
+
+## Acceptance Criteria Quality
+
+- [x] CHK022 - Is each P1 user story's "Independent Test" specific enough to be executed by someone who has never seen the feature (concrete steps, not "just verify it works")? [Measurability, Spec §US1–US4] <!-- verified: each US has a step-by-step Independent Test paragraph naming inputs (e.g., "set a multi-line description with markdown markers"), expected visual outcomes, and the verification surface. -->
+- [x] CHK023 - Is the "no formatting, no executable HTML" criterion in US1 acceptance #4 expressible as a deterministic test assertion (e.g., `expect(html).not.toContain('<script>')`)? [Measurability, Spec §US1] <!-- accepted: T019 covers literally this — "markdown chars rendered literally (no HTML)". The assertion shape is test-author choice; the requirement is deterministic. -->
+- [x] CHK024 - Is US2 acceptance #3 ("right column does not collapse below the map's height" at exactly 768px) bounded by an explicit numeric tolerance (e.g., ±2px)? [Measurability, Spec §US2] <!-- already covered: E-06 specifies `min-height: 16rem` (= 256px) on the right column — exact, not a tolerance band. -->
+- [x] CHK025 - Is US4 acceptance #4 ("server returns a 500-class error") bounded to exactly HTTP 500, or does any 5xx satisfy? [Clarity, Spec §US4] <!-- verified: contracts/candidate-create.md commits to "500 Internal Server Error" specifically; data-model.md uses `HTTPException(500, ...)`; FR-011 and US4 #4 say "500-class" but the contract pins it to 500 exactly. The implementation is unambiguous. -->
+
+## Scenario Coverage
+
+- [x] CHK026 - Are concurrency scenarios documented (two admins editing the same `formConfig` simultaneously — last-write-wins? optimistic lock?) — or is this intentionally inherited from the 008 status quo? [Coverage, Gap, Spec §FR-010] <!-- accepted: inherited from 008 — last-write-wins via the existing PUT endpoint. No optimistic locking is added by 012; this is in scope for a separate hardening if it ever causes pain. -->
+- [x] CHK027 - Are recovery requirements defined for a partial migration-script failure (script crashes mid-tenant after touching some `clients.form_config` rows) — what state should the operator restore? [Coverage, Gap, Spec §Dependencies / research.md R-05] <!-- already covered: research.md R-05 wraps each tenant in a single transaction (rollback-safe) and the script is idempotent — re-run finishes the job. The audit row per tenant gives a forensic checkpoint. -->
+- [x] CHK028 - Is the "tenant provisioned after migration ran" scenario specified — does new-tenant onboarding inherit BASE_CANDIDATE_FIELDS handling automatically (the formConfig is empty `{}` so no collision possible — confirm this is documented)? [Coverage, Gap, Spec §FR-011] <!-- accepted: a freshly provisioned tenant has `clients.form_config = {}` (or the per-tenant default) which contains no `fields[]`, so no collision is possible. The candidate-create handler always merges BASE_CANDIDATE_FIELDS at request time — new tenants get the lock for free. R-05 + tasks T013 cover the script lineage. -->
+- [x] CHK029 - Is the scenario covered where an existing candidate (created before this feature) has `additional_fields` missing several base keys — does any GET path break, or are reads tolerant of missing keys? [Coverage, Gap, Spec §FR-009] <!-- resolved: spec amended with E-12 — GET endpoints are tolerant; the 9-key contract is enforced only on create/update. Backfill explicitly out of scope. -->
+- [x] CHK030 - Is the "client deleted while candidate registration form is open" scenario addressed (stale `useClient` data, primary AE name pointing to a soft-deleted user)? [Coverage, Gap, Spec §FR-015] <!-- accepted: TanStack Query refetch-on-window-focus catches the soft-delete (404 → form unmounts to error state); soft-deleted AE users are filtered out at SQL time by the new `users.is_active = true` predicate added in CHK011's research.md R-04 amendment. -->
+
+## Edge Case Coverage
+
+- [x] CHK031 - Is the "description is exactly 2,000 characters at the byte boundary" case explicit (E-07 handles char-count; what about multi-byte UTF-8 if `char_length` differs from `octet_length`)? [Edge Case, Ambiguity, Spec §E-07] <!-- accepted: PostgreSQL `char_length` counts characters (codepoints), not bytes — Zod `.max(2000)` and the DB CHECK both operate on character length. UTF-8 multi-byte content takes more storage but is unbounded by `char_length`. Behavior is deterministic and matches user intuition. -->
+- [x] CHK032 - Is the case where `client.address` exists but is whitespace-only (e.g., `"   "`) covered for the "Copiar ubicación" button (hidden? show fallback toast?)? [Edge Case, Gap, Spec §E-01] <!-- already covered: research.md R-02 trims after collapsing whitespace; if the trimmed result is empty, FR-007's "shown only if address text is present" hides the button. -->
+- [x] CHK033 - Is the case where the migration script encounters a `form_config` whose shape is malformed (not a JSON object, missing `fields[]` array) covered (skip + log? abort + report?)? [Edge Case, Gap, Spec §research.md R-05] <!-- already covered: R-05's "one transaction per tenant scopes the blast radius if a tenant has a malformed form_config. Keep going for the other tenants and report." -->
+- [x] CHK034 - Is the case where two custom fields in the same `formConfig` collide with each other (independent of base-key collision) addressed by FR-010, or only base collisions? [Edge Case, Spec §FR-010] <!-- accepted: 008 already enforces uniqueness on `fields[].key` within a single `form_config` (Zod refinement). 012 only adds the base-key collision; custom-vs-custom is inherited unchanged. -->
+
+## Non-Functional Requirements
+
+- [x] CHK035 - Are accessibility (WCAG-level) requirements specified anywhere in the spec for the redesigned client detail page, or are they implicitly inherited from existing tenant-wide standards? [Gap, Constitution adjacency] <!-- accepted: implicitly inherited via the design-system + web-design-guidelines skill referenced in plan §VII. shadcn/ui primitives meet WCAG AA out of the box. -->
+- [x] CHK036 - Are performance requirements quantified for the new `getClientDetail` SQL (which now adds the `primaryAccountExecutiveName` LEFT JOIN to `users` + `client_assignments`)? [Gap, Performance] <!-- accepted: plan.md §Performance Goals declares the formConfig PUT/audit added cost (≤50 ms p95) which is the heaviest 012 path; the new LEFT JOIN to a small per-client subset of `client_assignments` (existing index `client_assignments_client_id_idx`) + `users` (PK) is well below that budget. -->
+- [x] CHK037 - Are observability requirements defined for the new 500 (`form_config_tampered`) — does it surface as a structured log with `tenantId` so support can paginate? [Gap, Spec §FR-011] <!-- accepted: the error envelope itself carries `tenantId`, `clientId`, and `missingBaseKeys` (contracts/candidate-create.md). Workers' built-in logger emits these as JSON; no custom observability layer needed. -->
+
+## Dependencies & Assumptions
+
+- [x] CHK038 - Are all assumptions listed in spec.md §Assumptions also reflected in plan.md (no orphaned assumptions only the spec author knows about)? [Consistency, Spec §Assumptions / Plan] <!-- verified: tenant isolation, no data migration, map provider, description sanitation, base-field key freeze, base-field storage, custom-field collision, primary-AE definition, constitution alignment — all surface in plan.md (Constitution Check rows or Technical Context paragraphs). -->
+- [x] CHK039 - Is the dependency on the pre-deploy migration script (T079a in tasks.md) reflected as a release-blocking gate in the PR template / CI workflow, or only documented inline? [Traceability, Spec §Dependencies / tasks.md T079a] <!-- accepted: T079a is explicitly tagged "[Production cutover gate — BLOCKING]" in tasks.md; T081 PR description requires confirmation of staging execution. The gate is procedural (checkbox in PR body) not a CI step — acceptable for a 2-dev team. -->
+- [x] CHK040 - Is the assumption that React's default escaping is sufficient for description sanitation explicitly acknowledged (so future raw-HTML insertion APIs are caught at review)? [Assumption, Spec §Assumptions / E-02] <!-- already covered: spec Assumptions §"Description sanitation" — "Plain-text storage with display-time escaping (the default in React) is sufficient — no markdown renderer, no rich-text editor." -->
+
+## Ambiguities & Conflicts (post-/speckit.analyze sweep)
+
+- [x] CHK041 - Are there any remaining `[NEEDS CLARIFICATION]` markers anywhere in the spec, plan, research, contracts, data-model, or tasks files? [Traceability] <!-- verified: `grep -rn "NEEDS CLARIFICATION" specs/012-client-detail-ux/` finds matches only in the requirements.md checklist's "[x] No [NEEDS CLARIFICATION] markers remain" assertion and in research.md's footer "All NEEDS CLARIFICATION resolved". Zero open markers. -->
+- [x] CHK042 - Is the spec's status footer (`**Status**: Draft`) up-to-date with the post-clarify, post-analyze state, or does it understate readiness? [Traceability, Spec §header] <!-- resolved: status updated to "Ready for implementation (post-clarify, post-analyze, post pre-implementation audit)". -->
+- [x] CHK043 - Is the term "primary AE" used consistently (always meaning "earliest-assigned AE row") and never confused with "active AE" or "lead AE" elsewhere in the spec? [Consistency, Spec §FR-015 / Assumptions] <!-- verified: the spec uses "primary AE" in FR-015, Assumption "Primary AE — operational definition", and Clarifications Q3 — all redirect to the same definition. No other variants ("lead AE", "active AE") appear. -->
+
+---
+
+## How to use this checklist
+
+1. **Before `/speckit.implement`**, walk through each item in order.
+2. For each item, mark `[x]` if the requirement quality passes the test, or leave `[ ]` and add a brief note inline (`<!-- gap: … -->`).
+3. **Items marked `[Gap]` or `[Ambiguity]` should NOT block implementation by default** — they are *findings about requirement quality*, not blockers. Decide per-item whether to (a) amend the spec now, (b) accept the gap and document the decision, or (c) defer to a follow-up.
+4. **Items marked `[Consistency]` or `[Conflict]` SHOULD block** if they reveal contradictions — fix the spec/plan/contracts before implementing.
+5. After completion, summarize the resolved/deferred/blocked count at the bottom of this file and reference it in the PR body.
+
+## Summary (filled in post-walkthrough, 2026-05-01)
+
+- Items reviewed: **43 / 43**
+- Resolved on the spec (amended): **6** — CHK004 (E-11 added), CHK011 (R-04 + Assumption clarified re user.is_active), CHK017 (data-model.md FR-011 message aligned with contracts), CHK029 (E-12 added), CHK042 (status footer updated). Plus the related E-08 contract/spec normalization fix discovered in passing (Zod `.max(120)` no `.min(1)` for `position`, with empty-string normalization documented in contracts and tasks T060/T061/T064).
+- Accepted as-is (documented gap): **37** — see the inline rationales above. Predominantly accessibility/visual-design implementation details inherited from constitution + design-system + shadcn primitives, and scenarios already covered by R-04/R-05/E-04/etc. that the checklist asked to be re-stated for self-containment.
+- Deferred to follow-up feature: **0**.
+- Blocking issues found: **0** — the one true blocker (CHK017's data-model.md vs. contracts/candidate-create.md envelope mismatch) was fixed during the walkthrough.
+
+**Verdict**: Ready for `/speckit.implement`.

@@ -22,6 +22,8 @@ export const clientContacts = pgTable(
     name: varchar("name", { length: 200 }).notNull(),
     phone: varchar("phone", { length: 20 }).notNull(),
     email: varchar("email", { length: 255 }).notNull(),
+    // 012-client-detail-ux — cargo / puesto del contacto (opcional).
+    position: varchar("position", { length: 120 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

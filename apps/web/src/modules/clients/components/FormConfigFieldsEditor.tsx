@@ -10,7 +10,11 @@ import {
   usePatchFormConfigField,
 } from "../hooks/useClients";
 import type { ICustomFormField } from "../services/clientService";
-import type { IClientDetailDto } from "@bepro/shared";
+import {
+  BASE_CANDIDATE_FIELDS,
+  BASE_FIELD_KEY_SET,
+  type IClientDetailDto,
+} from "@bepro/shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -124,6 +128,13 @@ export function FormConfigFieldsEditor({
       setError("La clave y la etiqueta son obligatorias.");
       return;
     }
+    // 012-client-detail-ux / FR-010 — collision con campos base.
+    if (BASE_FIELD_KEY_SET.has(createDraft.key as never)) {
+      setError(
+        "La clave colisiona con un campo base del formulario de candidatos. Renómbrala.",
+      );
+      return;
+    }
     const options =
       createDraft.type === "select" ? parseOptions(createDraft.optionsRaw) : null;
     if (createDraft.type === "select" && (!options || options.length === 0)) {
@@ -207,9 +218,9 @@ export function FormConfigFieldsEditor({
     <div className="space-y-3" data-slot="form-config-fields-editor">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          Campos personalizados por cliente. Los 8 campos estándar ({""}
-          <code>showAge</code>, <code>showPlant</code>, …) siguen configurándose
-          en la pestaña anterior.
+          Los primeros 9 campos son la base obligatoria del formulario de
+          candidatos y no pueden eliminarse ni renombrarse. Debajo, agrega
+          campos personalizados por cliente.
         </p>
         {!readOnly && (
           <Button size="sm" onClick={openCreate}>
@@ -232,6 +243,30 @@ export function FormConfigFieldsEditor({
             </TableRow>
           </TableHeader>
           <TableBody>
+            {/* 012 / FR-009, FR-010 — Base candidate fields (locked, read-only). */}
+            {BASE_CANDIDATE_FIELDS.map((bf) => (
+              <TableRow
+                key={`base-${bf.key}`}
+                data-testid={`base-field-row-${bf.key}`}
+              >
+                <TableCell>
+                  <code className="text-xs">{bf.key}</code>
+                </TableCell>
+                <TableCell className="font-medium">{bf.label}</TableCell>
+                <TableCell>
+                  <Badge variant="secondary">{TYPE_LABELS[bf.type] ?? bf.type}</Badge>
+                </TableCell>
+                <TableCell>Sí</TableCell>
+                <TableCell>
+                  <Badge variant="default">Campo base</Badge>
+                </TableCell>
+                {!readOnly && (
+                  <TableCell className="text-right text-xs text-muted-foreground italic">
+                    Bloqueado
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}
             {fields.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={readOnly ? 5 : 6} className="h-32 p-0">

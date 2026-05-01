@@ -18,6 +18,11 @@ export const createClientSchema = z.object({
   address: z.string().max(500).optional(),
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
+  // 012-client-detail-ux / FR-001 — descripción libre (≤2000) en plain text.
+  description: z
+    .string()
+    .max(2000, "La descripción no puede exceder 2,000 caracteres.")
+    .optional(),
   formConfig: clientFormConfigSchema.optional(),
 });
 
@@ -31,6 +36,12 @@ export const updateClientSchema = z.object({
   latitude: z.number().min(-90).max(90).optional().nullable(),
   longitude: z.number().min(-180).max(180).optional().nullable(),
   isActive: z.boolean().optional(),
+  // 012-client-detail-ux / FR-001 — descripción libre (≤2000); null o "" → NULL.
+  description: z
+    .string()
+    .max(2000, "La descripción no puede exceder 2,000 caracteres.")
+    .nullable()
+    .optional(),
   formConfig: clientFormConfigSchema.optional(),
 });
 
@@ -66,6 +77,9 @@ export const createContactSchema = z.object({
     .string()
     .email("Formato de correo electrónico inválido")
     .max(255),
+  // 012-client-detail-ux / FR-002 — cargo / puesto (opcional, ≤120). Empty
+  // string normaliza a NULL en el servicio (E-08).
+  position: z.string().max(120).optional(),
 });
 
 export type CreateContactFormValues = z.infer<typeof createContactSchema>;
@@ -79,6 +93,8 @@ export const updateContactSchema = z.object({
     .regex(/^[\d\s+()-]+$/, "Formato de teléfono inválido")
     .optional(),
   email: z.string().email("Formato de correo electrónico inválido").max(255).optional(),
+  // 012-client-detail-ux — cargo / puesto. null limpia, empty → NULL en service.
+  position: z.string().max(120).nullable().optional(),
 });
 
 export type UpdateContactFormValues = z.infer<typeof updateContactSchema>;

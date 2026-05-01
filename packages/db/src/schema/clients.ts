@@ -5,6 +5,7 @@ import {
   boolean,
   numeric,
   jsonb,
+  text,
   timestamp,
   index,
 } from "drizzle-orm/pg-core";
@@ -23,6 +24,8 @@ export const clients = pgTable(
     address: varchar("address", { length: 500 }),
     latitude: numeric("latitude", { precision: 10, scale: 7 }),
     longitude: numeric("longitude", { precision: 10, scale: 7 }),
+    // 012-client-detail-ux — descripción libre (≤2000); CHECK en DB.
+    description: text("description"),
     formConfig: jsonb("form_config").notNull().default({}),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true })

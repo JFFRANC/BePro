@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useClient, useUpdateClient } from "../hooks/useClients";
 import { ClientForm } from "../components/ClientForm";
 import { FormConfigEditor } from "../components/FormConfigEditor";
@@ -13,6 +13,7 @@ import { PositionList } from "../components/PositionList";
 // 011-puestos-profile-docs / US3 — `DocumentManager` y la pestaña "Documentos"
 // se eliminaron a nivel de cliente; los documentos ahora viven por puesto.
 import { LocationMap } from "../components/LocationMap";
+import { CopyAddressButton } from "../components/CopyAddressButton";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,16 +35,29 @@ import { useAppAbility } from "@/components/ability-provider";
 import { useConfirm } from "@/components/confirm-dialog";
 import { getApiErrorMessage } from "@/lib/error-utils";
 import { toast } from "sonner";
-import { ArrowLeft, Pencil, Power } from "lucide-react";
+import { ArrowLeft, MapPin, Pencil, Power } from "lucide-react";
 
 export function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const ability = useAppAbility();
   const { data: client, isLoading } = useClient(id!);
   const updateClient = useUpdateClient(id!);
   const confirm = useConfirm();
   const [showEditDialog, setShowEditDialog] = useState(false);
+  // 012-client-detail-ux / US3 — defensive redirect: si la URL trae el
+  // segmento legacy `/config`, lo convertimos a `/clients/:id` (sin segmento
+  // por pestaña, ver research §R-03) y forzamos la pestaña "form".
+  const initialTab = location.pathname.endsWith("/config") ? "form" : "contacts";
+  const [activeTab, setActiveTab] = useState<string>(initialTab);
+
+  useEffect(() => {
+    if (id && location.pathname.endsWith("/config")) {
+      navigate(`/clients/${id}`, { replace: true });
+      setActiveTab("form");
+    }
+  }, [id, location.pathname, navigate]);
 
   const isAdmin = ability.can("manage", "all");
   const canWrite = ability.can("update", "Client");
@@ -90,6 +104,9 @@ export function ClientDetailPage() {
     );
   }
 
+  const hasCoords = client.latitude != null && client.longitude != null;
+  const hasDescription = !!client.description?.trim();
+
   return (
     <div className="page-container py-8 space-y-6">
       <PageHeader
@@ -126,30 +143,86 @@ export function ClientDetailPage() {
         </Button>
       </PageHeader>
 
-      {/* Ubicación */}
-      {(client.address || client.latitude != null || client.longitude != null) && (
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium">Ubicación</h3>
+      {/* 012 / US2 — 2-column layout en md+ (mapa izquierda, info derecha);
+          single-column abajo de md (orden: descripción → info → mapa al final). */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Mapa + dirección + copiar — orden visual en mobile va al final */}
+        <section
+          aria-label="Ubicación"
+          className="order-last md:order-none space-y-3"
+        >
+          <h3 className="text-sm font-medium flex items-center gap-2">
+            <MapPin className="h-4 w-4" aria-hidden="true" />
+            Ubicación
+          </h3>
+          {hasCoords ? (
+            <div className="overflow-hidden rounded-lg border h-64">
+              <LocationMap
+                latitude={client.latitude!}
+                longitude={client.longitude!}
+                address={client.address ?? undefined}
+                readOnly
+              />
+            </div>
+          ) : (
+            <div className="h-64 rounded-lg border border-dashed flex items-center justify-center text-sm text-muted-foreground">
+              Sin ubicación capturada
+            </div>
+          )}
           {client.address && (
             <p className="text-sm text-muted-foreground">{client.address}</p>
           )}
-          {client.latitude != null && client.longitude != null && (
-            <LocationMap
-              latitude={client.latitude}
-              longitude={client.longitude}
-              address={client.address ?? undefined}
-              readOnly
-            />
-          )}
-        </div>
-      )}
+          <CopyAddressButton address={client.address} />
+        </section>
 
-      <Tabs defaultValue="contacts">
+        {/* Descripción + info general */}
+        <div className="space-y-4">
+          {/* US1 — Bloque descripción: oculto si null/empty; whitespace-pre-line
+              preserva \n y muestra markdown literal. */}
+          {hasDescription && (
+            <section aria-label="Descripción" className="space-y-2">
+              <h3 className="text-sm font-medium">Descripción</h3>
+              <p
+                data-testid="client-description"
+                className="text-sm text-foreground whitespace-pre-line"
+              >
+                {client.description}
+              </p>
+            </section>
+          )}
+
+          <section aria-label="Información general" className="space-y-2">
+            <h3 className="text-sm font-medium">Información general</h3>
+            <dl className="grid grid-cols-1 gap-2 text-sm">
+              {client.email && (
+                <div className="flex flex-col">
+                  <dt className="text-xs text-muted-foreground">Correo</dt>
+                  <dd>{client.email}</dd>
+                </div>
+              )}
+              {client.phone && (
+                <div className="flex flex-col">
+                  <dt className="text-xs text-muted-foreground">Teléfono</dt>
+                  <dd>{client.phone}</dd>
+                </div>
+              )}
+              {!client.email && !client.phone && (
+                <p className="text-xs text-muted-foreground">
+                  No se han capturado datos de contacto general.
+                </p>
+              )}
+            </dl>
+          </section>
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="contacts">Contactos</TabsTrigger>
           <TabsTrigger value="positions">Puestos</TabsTrigger>
           {isAdmin && <TabsTrigger value="assignments">Asignaciones</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="config">Configuración</TabsTrigger>}
+          {/* 012 / US3 — "Configuración" → "Formulario" (value=`form`). */}
+          {isAdmin && <TabsTrigger value="form">Formulario</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="contacts" className="mt-4">
@@ -167,7 +240,7 @@ export function ClientDetailPage() {
         )}
 
         {isAdmin && (
-          <TabsContent value="config" className="mt-4 space-y-6">
+          <TabsContent value="form" className="mt-4 space-y-6">
             <FormConfigEditor client={client} />
             {/* 008-ux-roles-refinements / US6 — admin-managed custom fields. */}
             <FormConfigFieldsEditor client={client} />
