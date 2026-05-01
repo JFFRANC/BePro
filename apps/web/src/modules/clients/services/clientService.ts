@@ -5,16 +5,23 @@ import type {
   IClientListResponse,
   IClientContactDto,
   IClientPositionDto,
-  IClientDocumentDto,
   IClientAssignmentDto,
   ICreateClientRequest,
   IUpdateClientRequest,
   IAssignUserRequest,
   ICreateContactRequest,
   IUpdateContactRequest,
-  ICreatePositionRequest,
-  IUpdatePositionRequest,
+  CreatePositionProfileInput,
+  UpdatePositionProfileInput,
+  IPositionDocumentDto,
+  ICreatePositionDocumentResponse,
+  PositionDocumentType,
+  CreatePositionDocumentInput,
 } from "@bepro/shared";
+
+// 011-puestos-profile-docs — request shapes (alias para legibilidad).
+export type ICreatePositionRequest = CreatePositionProfileInput;
+export type IUpdatePositionRequest = UpdatePositionProfileInput;
 
 // -- Client CRUD --
 
@@ -190,7 +197,7 @@ export async function deleteContact(clientId: string, contactId: string): Promis
   await apiClient.delete(`/clients/${clientId}/contacts/${contactId}`);
 }
 
-// -- Positions --
+// -- Positions (011 — perfil completo) --
 
 export async function createPosition(
   clientId: string,
@@ -214,6 +221,16 @@ export async function listPositions(
   return response.data.data;
 }
 
+export async function getPosition(
+  clientId: string,
+  positionId: string,
+): Promise<IClientPositionDto> {
+  const response = await apiClient.get<{ data: IClientPositionDto }>(
+    `/clients/${clientId}/positions/${positionId}`,
+  );
+  return response.data.data;
+}
+
 export async function updatePosition(
   clientId: string,
   positionId: string,
@@ -230,36 +247,49 @@ export async function deletePosition(clientId: string, positionId: string): Prom
   await apiClient.delete(`/clients/${clientId}/positions/${positionId}`);
 }
 
-// -- Documents --
+// -- Position documents (011 / US2 — server-proxied R2 upload, ADR-002) --
 
-export async function uploadDocument(
+export async function createPositionDocument(
   clientId: string,
+  positionId: string,
+  input: CreatePositionDocumentInput,
+): Promise<ICreatePositionDocumentResponse> {
+  const response = await apiClient.post<{ data: ICreatePositionDocumentResponse }>(
+    `/clients/${clientId}/positions/${positionId}/documents`,
+    input,
+  );
+  return response.data.data;
+}
+
+export async function uploadPositionDocumentBytes(
+  clientId: string,
+  positionId: string,
+  documentId: string,
   file: File,
-  documentType: string,
-): Promise<IClientDocumentDto> {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("documentType", documentType);
-
-  const response = await apiClient.post<{ data: IClientDocumentDto }>(
-    `/clients/${clientId}/documents`,
-    formData,
-    { headers: { "Content-Type": "multipart/form-data" } },
+): Promise<IPositionDocumentDto> {
+  const response = await apiClient.post<{ data: IPositionDocumentDto }>(
+    `/clients/${clientId}/positions/${positionId}/documents/${documentId}/upload`,
+    file,
+    {
+      headers: {
+        "Content-Type": file.type,
+        "Content-Length": String(file.size),
+      },
+    },
   );
   return response.data.data;
 }
 
-export async function listDocuments(clientId: string): Promise<IClientDocumentDto[]> {
-  const response = await apiClient.get<{ data: IClientDocumentDto[] }>(
-    `/clients/${clientId}/documents`,
+export async function downloadPositionDocument(
+  clientId: string,
+  positionId: string,
+  documentId: string,
+  fileName: string,
+): Promise<void> {
+  const response = await apiClient.get(
+    `/clients/${clientId}/positions/${positionId}/documents/${documentId}/download`,
+    { responseType: "blob" },
   );
-  return response.data.data;
-}
-
-export async function downloadDocument(clientId: string, documentId: string, fileName: string): Promise<void> {
-  const response = await apiClient.get(`/clients/${clientId}/documents/${documentId}/download`, {
-    responseType: "blob",
-  });
   const url = URL.createObjectURL(response.data);
   const link = document.createElement("a");
   link.href = url;
@@ -270,6 +300,31 @@ export async function downloadDocument(clientId: string, documentId: string, fil
   URL.revokeObjectURL(url);
 }
 
-export async function deleteDocument(clientId: string, documentId: string): Promise<void> {
-  await apiClient.delete(`/clients/${clientId}/documents/${documentId}`);
+export async function softDeletePositionDocument(
+  clientId: string,
+  positionId: string,
+  documentId: string,
+): Promise<void> {
+  await apiClient.delete(
+    `/clients/${clientId}/positions/${positionId}/documents/${documentId}`,
+  );
 }
+
+export async function listArchivedPositionDocuments(
+  clientId: string,
+  positionId: string,
+  type?: PositionDocumentType,
+): Promise<IPositionDocumentDto[]> {
+  const response = await apiClient.get<{ data: IPositionDocumentDto[] }>(
+    `/clients/${clientId}/positions/${positionId}/documents/history`,
+    { params: type ? { type } : undefined },
+  );
+  return response.data.data;
+}
+
+// -- Legacy client documents (011 / US3) — endpoints removidos --
+//
+// Las funciones `uploadDocument` / `listDocuments` / `downloadDocument` /
+// `deleteDocument` se eliminaron por completo. Los documentos viven ahora por
+// puesto (createPositionDocument / uploadPositionDocumentBytes / etc.). Los
+// endpoints legacy de la API responden 410 Gone.

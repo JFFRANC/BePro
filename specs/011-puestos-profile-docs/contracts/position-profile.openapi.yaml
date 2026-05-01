@@ -1,0 +1,366 @@
+openapi: 3.1.0
+info:
+  title: BePro — Position Profile
+  version: 0.11.0
+  description: |
+    Endpoints for the full role profile on `client_positions`. Extends the existing
+    POST/GET/PATCH/DELETE endpoints under `/api/clients/:clientId/positions` so that
+    request bodies and response payloads carry the profile fields documented in
+    `data-model.md`. All profile fields are optional individually (FR-002); only
+    `name` is required. Authorization, tenant scoping, and audit emission are
+    delegated to the existing middleware chain.
+
+servers:
+  - url: https://api.bepro.example/api
+    description: Production
+  - url: http://localhost:8787/api
+    description: Local dev
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Gender:
+      type: string
+      enum: [masculino, femenino, indistinto]
+    CivilStatus:
+      type: string
+      enum: [soltero, casado, indistinto]
+    EducationLevel:
+      type: string
+      enum: [ninguna, primaria, secundaria, preparatoria, tecnica, licenciatura, posgrado]
+    PaymentFrequency:
+      type: string
+      enum: [weekly, biweekly, monthly]
+    Shift:
+      type: string
+      enum: [fixed, rotating]
+    WorkDay:
+      type: string
+      enum: [mon, tue, wed, thu, fri, sat, sun]
+
+    PositionProfile:
+      type: object
+      description: Profile fields. Every field nullable except those required by the existing schema.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Existing required field; must remain unique within the client.
+        vacancies:
+          type: integer
+          minimum: 1
+          maximum: 32767
+          nullable: true
+        workLocation:
+          type: string
+          maxLength: 500
+          nullable: true
+        ageMin:
+          type: integer
+          minimum: 0
+          maximum: 120
+          nullable: true
+        ageMax:
+          type: integer
+          minimum: 0
+          maximum: 120
+          nullable: true
+        gender:
+          $ref: "#/components/schemas/Gender"
+          nullable: true
+        civilStatus:
+          $ref: "#/components/schemas/CivilStatus"
+          nullable: true
+        educationLevel:
+          $ref: "#/components/schemas/EducationLevel"
+          nullable: true
+        experienceText:
+          type: string
+          maxLength: 2000
+          nullable: true
+          description: Single field consolidating the Excel's `Años de Experiencia` + `Experiencia Requerida`.
+        salaryAmount:
+          type: number
+          format: decimal
+          minimum: 0
+          maximum: 99999999.99
+          multipleOf: 0.01
+          nullable: true
+        salaryCurrency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          default: MXN
+          nullable: true
+        paymentFrequency:
+          $ref: "#/components/schemas/PaymentFrequency"
+          nullable: true
+        salaryNotes:
+          type: string
+          maxLength: 2000
+          nullable: true
+          description: Free-text bonuses, vales, edge details (Q3 hybrid).
+        benefits:
+          type: string
+          maxLength: 4000
+          nullable: true
+        scheduleText:
+          type: string
+          maxLength: 2000
+          nullable: true
+        workDays:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/WorkDay"
+          uniqueItems: true
+        shift:
+          $ref: "#/components/schemas/Shift"
+          nullable: true
+        requiredDocuments:
+          type: array
+          nullable: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 200
+        responsibilities:
+          type: string
+          maxLength: 4000
+          nullable: true
+        faq:
+          type: array
+          nullable: true
+          description: Flat list of free-text strings — phone-screen filter checklist, NOT q/a pairs.
+          items:
+            type: string
+            minLength: 1
+            maxLength: 2000
+
+    PositionDto:
+      allOf:
+        - $ref: "#/components/schemas/PositionProfile"
+        - type: object
+          required: [id, clientId, name, isActive, createdAt, updatedAt]
+          properties:
+            id:
+              type: string
+              format: uuid
+            clientId:
+              type: string
+              format: uuid
+            isActive:
+              type: boolean
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+            documents:
+              type: array
+              description: Active documents attached to the position (one per type max). Always present, may be empty.
+              items:
+                type: object
+                required: [id, type, originalName, mimeType, sizeBytes, uploadedAt]
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  type:
+                    type: string
+                    enum: [contract, pase_visita]
+                  originalName:
+                    type: string
+                  mimeType:
+                    type: string
+                  sizeBytes:
+                    type: integer
+                  uploadedAt:
+                    type: string
+                    format: date-time
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+
+security:
+  - bearerAuth: []
+
+paths:
+  /clients/{clientId}/positions:
+    post:
+      summary: Create a position with full profile
+      description: |
+        Roles allowed: admin, manager, account_executive (with `verifyClientWriteAccess`).
+        Body must include `name`; every other field is optional. Cross-field validation
+        (`ageMin <= ageMax`) is enforced by the server.
+      parameters:
+        - in: path
+          name: clientId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PositionProfile"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/PositionDto"
+        "400":
+          description: Validation error (e.g. ageMin > ageMax)
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "403":
+          description: Role does not allow create
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "404":
+          description: Client not found in tenant
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "409":
+          description: Duplicate position name in client
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+
+  /clients/{clientId}/positions/{posId}:
+    get:
+      summary: Get a position with full profile
+      description: |
+        Roles allowed: admin, manager, account_executive (own clients), recruiter (assigned clients).
+        Returns 404 if the position does not exist OR belongs to another tenant
+        OR the operator is not assigned (FR-016 — indistinguishable not-found).
+      parameters:
+        - in: path
+          name: clientId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: posId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/PositionDto"
+        "404":
+          description: Not found / not in tenant / not assigned (uniform response)
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+
+    patch:
+      summary: Update profile fields (partial)
+      description: |
+        Roles allowed: admin, manager, account_executive. Any subset of profile fields
+        may be sent; omitted fields remain unchanged. Sending a field as `null`
+        clears it. Cross-field validation applies.
+      parameters:
+        - in: path
+          name: clientId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: posId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PositionProfile"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/PositionDto"
+        "400":
+          description: Validation error
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "403":
+          description: Role does not allow update
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "404":
+          description: Not found / not in tenant / not assigned
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "409":
+          description: Renamed to a name that conflicts with another active position in the client
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+
+  /clients/{clientId}/positions/{posId}/list-with-doc-summary:
+    get:
+      summary: Internal — list positions with active-doc summary for the position list view
+      description: |
+        Returns positions plus a compact `documents` map indicating which document types
+        are currently active (FR-010). Recruiter-readable for clients they are assigned to.
+      parameters:
+        - in: path
+          name: clientId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, isActive, documents]
+                      properties:
+                        id: { type: string, format: uuid }
+                        name: { type: string }
+                        isActive: { type: boolean }
+                        documents:
+                          type: object
+                          description: Active-document presence per type. Keys present iff a doc is active.
+                          properties:
+                            contract:
+                              type: object
+                              required: [id]
+                              properties:
+                                id: { type: string, format: uuid }
+                            pase_visita:
+                              type: object
+                              required: [id]
+                              properties:
+                                id: { type: string, format: uuid }

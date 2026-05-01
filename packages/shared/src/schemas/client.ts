@@ -83,17 +83,9 @@ export const updateContactSchema = z.object({
 
 export type UpdateContactFormValues = z.infer<typeof updateContactSchema>;
 
-export const createPositionSchema = z.object({
-  name: z.string().min(1, "El nombre del puesto es requerido").max(200),
-});
-
-export type CreatePositionFormValues = z.infer<typeof createPositionSchema>;
-
-export const updatePositionSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-});
-
-export type UpdatePositionFormValues = z.infer<typeof updatePositionSchema>;
+// 011-puestos-profile-docs — `createPositionSchema` y `updatePositionSchema`
+// se mueven a `./positions.ts` con el perfil completo (mismos identificadores;
+// los consumidores no necesitan cambios).
 
 export const documentTypeSchema = z.enum([
   "quotation",

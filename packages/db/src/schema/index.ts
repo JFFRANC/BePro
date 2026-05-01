@@ -10,8 +10,21 @@ export { auditEvents } from "./audit-events.js";
 export { clients } from "./clients.js";
 export { clientAssignments } from "./client-assignments.js";
 export { clientContacts } from "./client-contacts.js";
-export { clientPositions } from "./client-positions.js";
+export {
+  clientPositions,
+  positionGenderEnum,
+  positionCivilStatusEnum,
+  positionEducationLevelEnum,
+  positionPaymentFrequencyEnum,
+  positionShiftEnum,
+} from "./client-positions.js";
 export { clientDocuments } from "./client-documents.js";
+export {
+  clientPositionDocuments,
+  positionDocumentTypeEnum,
+  type ClientPositionDocumentRow,
+  type ClientPositionDocumentInsert,
+} from "./client-position-documents.js";
 // 007-candidates-module
 export {
   candidates,

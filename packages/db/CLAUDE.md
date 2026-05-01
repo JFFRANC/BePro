@@ -64,6 +64,7 @@ Integration tests open two Neon HTTP clients: one as `neondb_owner` to seed fixt
 - `users`, `audit_events` — from initial migrations (`0001_rls_policies.sql`)
 - `clients`, `client_assignments`, `client_contacts`, `client_positions`, `client_documents` — from clients module (`0002_rls_clients.sql`)
 - `candidates`, `candidate_attachments`, `candidate_duplicate_links`, `rejection_categories`, `decline_categories`, `privacy_notices`, `retention_reviews` — from candidates module (`0005_candidates_rls.sql`)
+- `client_position_documents` — from feature 011 (`0009_position_profile_rls.sql`); partial unique index `(tenant_id, position_id, type) WHERE is_active = true` enforces ≤1 active doc por (puesto, tipo); DELETE bloqueado a nivel RLS (soft-delete only)
 
 All use the same policy shape: `tenant_id = current_setting('app.tenant_id', true)::uuid` for SELECT/INSERT/UPDATE, `USING (false)` for DELETE (soft-delete only, LFPDPPP).
 

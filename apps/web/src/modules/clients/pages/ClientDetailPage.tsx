@@ -10,7 +10,8 @@ import { FormConfigFieldsEditor } from "../components/FormConfigFieldsEditor";
 import { AssignmentTable } from "../components/AssignmentTable";
 import { ContactDirectory } from "../components/ContactDirectory";
 import { PositionList } from "../components/PositionList";
-import { DocumentManager } from "../components/DocumentManager";
+// 011-puestos-profile-docs / US3 — `DocumentManager` y la pestaña "Documentos"
+// se eliminaron a nivel de cliente; los documentos ahora viven por puesto.
 import { LocationMap } from "../components/LocationMap";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -147,7 +148,6 @@ export function ClientDetailPage() {
         <TabsList>
           <TabsTrigger value="contacts">Contactos</TabsTrigger>
           <TabsTrigger value="positions">Puestos</TabsTrigger>
-          <TabsTrigger value="documents">Documentos</TabsTrigger>
           {isAdmin && <TabsTrigger value="assignments">Asignaciones</TabsTrigger>}
           {isAdmin && <TabsTrigger value="config">Configuración</TabsTrigger>}
         </TabsList>
@@ -158,10 +158,6 @@ export function ClientDetailPage() {
 
         <TabsContent value="positions" className="mt-4">
           <PositionList clientId={client.id} readOnly={!canWrite} />
-        </TabsContent>
-
-        <TabsContent value="documents" className="mt-4">
-          <DocumentManager clientId={client.id} readOnly={!canWrite} />
         </TabsContent>
 
         {isAdmin && (

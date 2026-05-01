@@ -8,7 +8,6 @@ import {
   updateContactSchema,
   createPositionSchema,
   updatePositionSchema,
-  documentTypeSchema,
   batchAssignmentsSchema,
   createFormConfigFieldSchema,
   patchFormConfigFieldSchema,
@@ -44,13 +43,21 @@ import {
   deleteContact,
   createPosition,
   listPositions,
+  getPosition,
   updatePosition,
   deletePosition,
-  createDocumentRecord,
-  listDocuments,
-  getDocumentById,
-  deleteDocumentRecord,
+  InvalidAgeRangeError,
+  // 011 / US2 — position documents
+  createPositionDocumentRecord,
+  uploadPositionDocumentBytes,
+  getPositionDocumentForDownload,
+  softDeletePositionDocument,
+  listArchivedPositionDocuments,
+  PositionDocumentNotFoundError,
+  PositionDocumentMimeError,
+  PositionDocumentSizeError,
 } from "./service.js";
+import { createPositionDocumentSchema } from "@bepro/shared";
 
 export const clientsRoutes = new Hono<HonoEnv>();
 
@@ -453,9 +460,11 @@ clientsRoutes.delete("/:clientId/contacts/:id", async (c) => {
 // Positions
 // ========================================
 
-// POST /clients/:clientId/positions — Crear puesto
+// POST /clients/:clientId/positions — Crear puesto (perfil completo)
+// Roles: admin, manager, account_executive (+ verifyClientWriteAccess para AE).
 clientsRoutes.post(
   "/:clientId/positions",
+  requireRole("admin", "manager", "account_executive"),
   zValidator("json", createPositionSchema),
   async (c) => {
     const user = c.get("user");
@@ -473,6 +482,18 @@ clientsRoutes.post(
       const result = await createPosition(db, tenantId, user.id, clientId, body);
       return c.json({ data: result }, 201);
     } catch (err) {
+      if (err instanceof InvalidAgeRangeError) {
+        return c.json(
+          {
+            error: {
+              code: "invalid_age_range",
+              message:
+                "El rango de edad mínimo no puede ser mayor que el máximo.",
+            },
+          },
+          400,
+        );
+      }
       if ((err as Error).message === "POSITION_DUPLICATE") {
         return c.json({ error: "Ya existe un puesto con este nombre en este cliente" }, 409);
       }
@@ -497,16 +518,37 @@ clientsRoutes.get("/:clientId/positions", async (c) => {
   return c.json({ data: result });
 });
 
-// PATCH /clients/:clientId/positions/:id — Actualizar puesto
+// GET /clients/:clientId/positions/:posId — Detalle de puesto (perfil + summary docs)
+// 404 uniforme para cross-tenant / no asignado (FR-016).
+clientsRoutes.get("/:clientId/positions/:posId", async (c) => {
+  const user = c.get("user");
+  const db = c.get("db");
+  const clientId = c.req.param("clientId");
+  const positionId = c.req.param("posId");
+
+  const hasAccess = await verifyClientAccess(db, user.id, user.role, clientId);
+  if (!hasAccess) {
+    return c.json({ error: "Puesto no encontrado" }, 404);
+  }
+
+  const result = await getPosition(db, clientId, positionId);
+  if (!result) {
+    return c.json({ error: "Puesto no encontrado" }, 404);
+  }
+  return c.json({ data: result });
+});
+
+// PATCH /clients/:clientId/positions/:posId — Actualizar puesto (parcial)
 clientsRoutes.patch(
-  "/:clientId/positions/:id",
+  "/:clientId/positions/:posId",
+  requireRole("admin", "manager", "account_executive"),
   zValidator("json", updatePositionSchema),
   async (c) => {
     const user = c.get("user");
     const tenantId = c.get("tenantId");
     const db = c.get("db");
     const clientId = c.req.param("clientId");
-    const positionId = c.req.param("id");
+    const positionId = c.req.param("posId");
 
     const hasWriteAccess = await verifyClientWriteAccess(db, user.id, user.role, clientId);
     if (!hasWriteAccess) {
@@ -520,6 +562,18 @@ clientsRoutes.patch(
       }
       return c.json({ data: result });
     } catch (err) {
+      if (err instanceof InvalidAgeRangeError) {
+        return c.json(
+          {
+            error: {
+              code: "invalid_age_range",
+              message:
+                "El rango de edad mínimo no puede ser mayor que el máximo.",
+            },
+          },
+          400,
+        );
+      }
       if ((err as Error).message === "POSITION_DUPLICATE") {
         return c.json({ error: "Ya existe un puesto con este nombre en este cliente" }, 409);
       }
@@ -528,13 +582,241 @@ clientsRoutes.patch(
   },
 );
 
-// DELETE /clients/:clientId/positions/:id — Eliminar puesto
-clientsRoutes.delete("/:clientId/positions/:id", async (c) => {
+// ========================================
+// Position Documents (011 / US2)
+// ========================================
+
+// POST /:clientId/positions/:posId/documents — crear registro (step 1 de 2)
+clientsRoutes.post(
+  "/:clientId/positions/:posId/documents",
+  requireRole("admin", "manager", "account_executive"),
+  zValidator("json", createPositionDocumentSchema),
+  async (c) => {
+    const user = c.get("user");
+    const tenantId = c.get("tenantId");
+    const db = c.get("db");
+    const clientId = c.req.param("clientId");
+    const positionId = c.req.param("posId");
+    const body = c.req.valid("json");
+
+    const hasWriteAccess = await verifyClientWriteAccess(db, user.id, user.role, clientId);
+    if (!hasWriteAccess) {
+      return c.json({ error: "Forbidden" }, 403);
+    }
+    try {
+      const result = await createPositionDocumentRecord(
+        db,
+        tenantId,
+        user.id,
+        clientId,
+        positionId,
+        body,
+      );
+      return c.json({ data: result }, 201);
+    } catch (err) {
+      if (err instanceof PositionDocumentNotFoundError) {
+        return c.json({ error: "Puesto no encontrado" }, 404);
+      }
+      if (err instanceof PositionDocumentMimeError) {
+        return c.json(
+          {
+            error: {
+              code: "invalid_mime",
+              message: "Tipo de archivo no permitido. Sólo PDF, DOC, DOCX.",
+            },
+          },
+          422,
+        );
+      }
+      if (err instanceof PositionDocumentSizeError) {
+        return c.json(
+          {
+            error: {
+              code: "file_too_large",
+              message: "El archivo excede el límite de 10 MB.",
+            },
+          },
+          422,
+        );
+      }
+      throw err;
+    }
+  },
+);
+
+// POST /:clientId/positions/:posId/documents/:docId/upload — subir bytes
+clientsRoutes.post(
+  "/:clientId/positions/:posId/documents/:docId/upload",
+  requireRole("admin", "manager", "account_executive"),
+  async (c) => {
+    const user = c.get("user");
+    const tenantId = c.get("tenantId");
+    const db = c.get("db");
+    const clientId = c.req.param("clientId");
+    const positionId = c.req.param("posId");
+    const documentId = c.req.param("docId");
+
+    const hasWriteAccess = await verifyClientWriteAccess(db, user.id, user.role, clientId);
+    if (!hasWriteAccess) {
+      return c.json({ error: "Forbidden" }, 403);
+    }
+
+    const contentType = c.req.header("Content-Type") ?? "";
+    const contentLengthHdr = c.req.header("Content-Length");
+    const declaredSize = contentLengthHdr ? Number(contentLengthHdr) : NaN;
+    if (!Number.isNaN(declaredSize) && declaredSize > 10 * 1024 * 1024) {
+      return c.json(
+        {
+          error: {
+            code: "file_too_large",
+            message: "El archivo excede el límite de 10 MB.",
+          },
+        },
+        422,
+      );
+    }
+
+    const body = await c.req.arrayBuffer();
+    try {
+      const dto = await uploadPositionDocumentBytes(
+        db,
+        tenantId,
+        user.id,
+        c.env.FILES,
+        clientId,
+        positionId,
+        documentId,
+        body,
+        contentType,
+      );
+      return c.json({ data: dto });
+    } catch (err) {
+      if (err instanceof PositionDocumentNotFoundError) {
+        return c.json({ error: "Documento no encontrado" }, 404);
+      }
+      if (err instanceof PositionDocumentMimeError) {
+        return c.json(
+          {
+            error: {
+              code: "invalid_mime",
+              message: "Tipo de archivo no permitido.",
+            },
+          },
+          422,
+        );
+      }
+      if (err instanceof PositionDocumentSizeError) {
+        return c.json(
+          {
+            error: {
+              code: "file_too_large",
+              message: "El archivo excede el límite de 10 MB.",
+            },
+          },
+          422,
+        );
+      }
+      throw err;
+    }
+  },
+);
+
+// GET /:clientId/positions/:posId/documents/:docId/download — stream
+clientsRoutes.get(
+  "/:clientId/positions/:posId/documents/:docId/download",
+  async (c) => {
+    const user = c.get("user");
+    const db = c.get("db");
+    const clientId = c.req.param("clientId");
+    const positionId = c.req.param("posId");
+    const documentId = c.req.param("docId");
+
+    const hasAccess = await verifyClientAccess(db, user.id, user.role, clientId);
+    if (!hasAccess) {
+      // Uniform 404 (FR-016)
+      return c.json({ error: "Documento no encontrado" }, 404);
+    }
+
+    // Recruiter sin asignación al cliente — `verifyClientAccess` arriba ya
+    // bloqueó (404). Aquí cubrimos los demás casos (archivado para no-admin,
+    // posición inactiva, etc.) en el service.
+    const stream = await getPositionDocumentForDownload(
+      db,
+      c.env.FILES,
+      clientId,
+      positionId,
+      documentId,
+      user.role,
+    );
+    if (!stream) {
+      return c.json({ error: "Documento no encontrado" }, 404);
+    }
+
+    return new Response(stream.body, {
+      headers: {
+        "Content-Type": stream.contentType,
+        "Content-Disposition": `attachment; filename="${encodeURIComponent(stream.filename)}"`,
+        "Content-Length": stream.contentLength.toString(),
+      },
+    });
+  },
+);
+
+// DELETE /:clientId/positions/:posId/documents/:docId — soft-delete (admin)
+clientsRoutes.delete(
+  "/:clientId/positions/:posId/documents/:docId",
+  requireRole("admin"),
+  async (c) => {
+    const user = c.get("user");
+    const tenantId = c.get("tenantId");
+    const db = c.get("db");
+    const clientId = c.req.param("clientId");
+    const positionId = c.req.param("posId");
+    const documentId = c.req.param("docId");
+
+    const ok = await softDeletePositionDocument(
+      db,
+      tenantId,
+      user.id,
+      clientId,
+      positionId,
+      documentId,
+    );
+    if (!ok) return c.json({ error: "Documento no encontrado" }, 404);
+    return c.body(null, 204);
+  },
+);
+
+// GET /:clientId/positions/:posId/documents/history — versiones (admin only, FR-018)
+clientsRoutes.get(
+  "/:clientId/positions/:posId/documents/history",
+  requireRole("admin"),
+  async (c) => {
+    const db = c.get("db");
+    const clientId = c.req.param("clientId");
+    const positionId = c.req.param("posId");
+    const typeQ = c.req.query("type");
+
+    const validType =
+      typeQ === "contract" || typeQ === "pase_visita" ? typeQ : undefined;
+
+    const rows = await listArchivedPositionDocuments(
+      db,
+      clientId,
+      positionId,
+      validType,
+    );
+    return c.json({ data: rows });
+  },
+);
+
+// DELETE /clients/:clientId/positions/:posId — Eliminar puesto
+clientsRoutes.delete("/:clientId/positions/:posId", async (c) => {
   const user = c.get("user");
   const tenantId = c.get("tenantId");
   const db = c.get("db");
   const clientId = c.req.param("clientId");
-  const positionId = c.req.param("id");
+  const positionId = c.req.param("posId");
 
   const hasWriteAccess = await verifyClientWriteAccess(db, user.id, user.role, clientId);
   if (!hasWriteAccess) {
@@ -550,158 +832,25 @@ clientsRoutes.delete("/:clientId/positions/:id", async (c) => {
 });
 
 // ========================================
-// Documents
+// Legacy Client Documents (011 / US3 — endpoints removidos)
+//
+// Mantener las rutas registradas (en lugar de borrarlas) para que un cliente
+// stale obtenga 410 Gone con un mensaje accionable, en vez de 404.
 // ========================================
 
-const ALLOWED_MIME_TYPES: Record<string, string[]> = {
-  quotation: ["application/pdf"],
-  interview_pass: ["image/png"],
-  position_description: [
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.ms-excel",
-  ],
+const LEGACY_GONE_BODY = {
+  error: {
+    code: "endpoint_removed",
+    message:
+      "Endpoint removido en feature 011 — los documentos viven ahora en cada puesto.",
+  },
 };
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-
-// POST /clients/:clientId/documents — Subir documento (multipart)
-clientsRoutes.post("/:clientId/documents", async (c) => {
-  const user = c.get("user");
-  const tenantId = c.get("tenantId");
-  const db = c.get("db");
-  const clientId = c.req.param("clientId");
-
-  const hasWriteAccess = await verifyClientWriteAccess(db, user.id, user.role, clientId);
-  if (!hasWriteAccess) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const formData = await c.req.formData();
-  const file = formData.get("file");
-  const documentType = formData.get("documentType");
-
-  if (!file || !(file instanceof File)) {
-    return c.json({ error: "El archivo es requerido" }, 400);
-  }
-
-  const typeResult = documentTypeSchema.safeParse(documentType);
-  if (!typeResult.success) {
-    return c.json({ error: "Tipo de documento inválido. Valores válidos: quotation, interview_pass, position_description" }, 400);
-  }
-
-  const docType = typeResult.data;
-
-  // Validar MIME type
-  const allowedMimes = ALLOWED_MIME_TYPES[docType];
-  if (!allowedMimes.includes(file.type)) {
-    return c.json(
-      { error: `Tipo de archivo no permitido para ${docType}. Tipos permitidos: ${allowedMimes.join(", ")}` },
-      415,
-    );
-  }
-
-  // Validar tamaño
-  if (file.size > MAX_FILE_SIZE) {
-    return c.json({ error: "El archivo excede el tamaño máximo de 10 MB" }, 413);
-  }
-
-  // Subir a R2
-  const storageKey = `clients/${clientId}/documents/${crypto.randomUUID()}-${file.name}`;
-  const fileBuffer = await file.arrayBuffer();
-
-  await c.env.FILES.put(storageKey, fileBuffer, {
-    httpMetadata: { contentType: file.type },
-    customMetadata: { originalName: file.name, documentType: docType },
-  });
-
-  // Registrar en DB
-  const record = await createDocumentRecord(db, tenantId, user.id, clientId, {
-    originalName: file.name,
-    documentType: docType,
-    mimeType: file.type,
-    sizeBytes: file.size,
-    storageKey,
-  });
-
-  return c.json({
-    data: {
-      id: record.id,
-      originalName: record.originalName,
-      documentType: record.documentType,
-      mimeType: record.mimeType,
-      sizeBytes: record.sizeBytes,
-      uploadedBy: record.uploadedBy,
-      createdAt: record.createdAt.toISOString(),
-    },
-  }, 201);
-});
-
-// GET /clients/:clientId/documents — Listar documentos
-clientsRoutes.get("/:clientId/documents", async (c) => {
-  const user = c.get("user");
-  const db = c.get("db");
-  const clientId = c.req.param("clientId");
-
-  const hasAccess = await verifyClientAccess(db, user.id, user.role, clientId);
-  if (!hasAccess) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const result = await listDocuments(db, clientId);
-  return c.json({ data: result });
-});
-
-// GET /clients/:clientId/documents/:id/download — Descargar documento
-clientsRoutes.get("/:clientId/documents/:id/download", async (c) => {
-  const user = c.get("user");
-  const db = c.get("db");
-  const clientId = c.req.param("clientId");
-  const documentId = c.req.param("id");
-
-  const hasAccess = await verifyClientAccess(db, user.id, user.role, clientId);
-  if (!hasAccess) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const doc = await getDocumentById(db, documentId);
-  if (!doc || doc.clientId !== clientId) {
-    return c.json({ error: "Documento no encontrado" }, 404);
-  }
-
-  const object = await c.env.FILES.get(doc.storageKey);
-  if (!object) {
-    return c.json({ error: "Archivo no encontrado en almacenamiento" }, 404);
-  }
-
-  return new Response(object.body, {
-    headers: {
-      "Content-Type": doc.mimeType,
-      "Content-Disposition": `attachment; filename="${encodeURIComponent(doc.originalName)}"`,
-      "Content-Length": doc.sizeBytes.toString(),
-    },
-  });
-});
-
-// DELETE /clients/:clientId/documents/:id — Eliminar documento
-clientsRoutes.delete("/:clientId/documents/:id", async (c) => {
-  const user = c.get("user");
-  const tenantId = c.get("tenantId");
-  const db = c.get("db");
-  const clientId = c.req.param("clientId");
-  const documentId = c.req.param("id");
-
-  const hasWriteAccess = await verifyClientWriteAccess(db, user.id, user.role, clientId);
-  if (!hasWriteAccess) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const deleted = await deleteDocumentRecord(db, tenantId, user.id, documentId);
-  if (!deleted) {
-    return c.json({ error: "Documento no encontrado" }, 404);
-  }
-
-  // Eliminar de R2
-  await c.env.FILES.delete(deleted.storageKey);
-
-  return c.body(null, 204);
-});
+clientsRoutes.post("/:clientId/documents", (c) => c.json(LEGACY_GONE_BODY, 410));
+clientsRoutes.get("/:clientId/documents", (c) => c.json(LEGACY_GONE_BODY, 410));
+clientsRoutes.get("/:clientId/documents/:id/download", (c) =>
+  c.json(LEGACY_GONE_BODY, 410),
+);
+clientsRoutes.delete("/:clientId/documents/:id", (c) =>
+  c.json(LEGACY_GONE_BODY, 410),
+);

@@ -21,6 +21,8 @@ import { UserDetailPage } from "@/modules/users/pages/UserDetailPage";
 import { ForcePasswordChangePage } from "@/modules/users/pages/ForcePasswordChangePage";
 import { ClientsPage } from "@/modules/clients/pages/ClientsPage";
 import { ClientDetailPage } from "@/modules/clients/pages/ClientDetailPage";
+// 011-puestos-profile-docs — detalle de puesto con perfil + docs + (admin) versiones.
+import { PositionDetailPage } from "@/modules/clients/pages/PositionDetailPage";
 import { NewCandidatePage } from "@/modules/candidates/pages/NewCandidatePage";
 import { CandidateListPage } from "@/modules/candidates/pages/CandidateListPage";
 import { CandidateDetailPage } from "@/modules/candidates/pages/CandidateDetailPage";
@@ -123,6 +125,10 @@ export function App() {
                       <Route path="/users/:id" element={<UserDetailPage />} />
                       <Route path="/clients" element={<ClientsPage />} />
                       <Route path="/clients/:id" element={<ClientDetailPage />} />
+                      <Route
+                        path="/clients/:id/positions/:posId"
+                        element={<PositionDetailPage />}
+                      />
                       <Route path="/candidates" element={<CandidateListPage />} />
                       <Route path="/candidates/new" element={<NewCandidatePage />} />
                       <Route path="/candidates/:id" element={<CandidateDetailPage />} />

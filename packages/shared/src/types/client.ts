@@ -50,6 +50,8 @@ export interface IClientContactDto {
   updatedAt: string;
 }
 
+// 011-puestos-profile-docs — perfil completo + summary de documentos activos.
+// Cada campo de perfil es opcional; sólo `name` es obligatorio (FR-002).
 export interface IClientPositionDto {
   id: string;
   clientId: string;
@@ -57,6 +59,40 @@ export interface IClientPositionDto {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  vacancies?: number | null;
+  workLocation?: string | null;
+  ageMin?: number | null;
+  ageMax?: number | null;
+  gender?: "masculino" | "femenino" | "indistinto" | null;
+  civilStatus?: "soltero" | "casado" | "indistinto" | null;
+  educationLevel?:
+    | "ninguna"
+    | "primaria"
+    | "secundaria"
+    | "preparatoria"
+    | "tecnica"
+    | "licenciatura"
+    | "posgrado"
+    | null;
+  experienceText?: string | null;
+  salaryAmount?: number | null;
+  salaryCurrency?: "MXN" | "USD" | "EUR" | null;
+  paymentFrequency?: "weekly" | "biweekly" | "monthly" | null;
+  salaryNotes?: string | null;
+  benefits?: string | null;
+  scheduleText?: string | null;
+  workDays?:
+    | ("mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun")[]
+    | null;
+  shift?: "fixed" | "rotating" | null;
+  requiredDocuments?: string[] | null;
+  responsibilities?: string | null;
+  faq?: string[] | null;
+  // Resumen de documentos activos (FR-010 — íconos en lista de puestos)
+  documents?: {
+    contract?: { id: string };
+    pase_visita?: { id: string };
+  };
 }
 
 export interface IClientDocumentDto {

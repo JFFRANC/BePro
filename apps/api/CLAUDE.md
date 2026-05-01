@@ -61,6 +61,7 @@ app.post("/login", zValidator("json", loginSchema), (c) => { ... });
 - `pnpm deploy` — Deploy to Cloudflare Workers
 - `pnpm test` — Run Vitest (unit + mocked integration)
 - `pnpm test:integration` — Run real-Neon integration tests (requires `DATABASE_URL_WORKER` in `.dev.vars`, see `vitest.integration.config.ts`)
+- `pnpm test:integration -- --run-slow` — Opt-in flag para tests `@slow` (e.g. SC-004 archive a N=2000 rows, feature 011)
 - `pnpm typecheck` — Type check
 
 ## Implemented Modules
@@ -70,7 +71,7 @@ app.post("/login", zValidator("json", loginSchema), (c) => { ... });
 | `auth` | `src/modules/auth/` | JWT login, refresh token rotation, role middleware, `SET LOCAL app.tenant_id` on every request |
 | `tenants` | embedded in `auth` / `users` | Tenant provisioning + slug lookup (pre-login, RLS-exempt table) |
 | `users` | `src/modules/users/` | User CRUD within tenant, role assignment, CSV import, password management. Feature 010: `POST /users` también escribe una fila a `client_assignments` (atómica) cuando el body trae `clientId` y el rol es `account_executive` o `recruiter`; admin/manager descartan `clientId` (no-op). Errores de cliente uniformes en 400 "cliente inactivo o inexistente". |
-| `clients` | `src/modules/clients/` | Client CRUD, contacts, positions, documents, AE assignments, per-client `form_config` |
+| `clients` | `src/modules/clients/` | Client CRUD, contacts, positions (perfil completo + documentos por puesto vía R2 binding `FILES`, partial unique index `(tenant_id, position_id, type) WHERE is_active=true`; legacy `client_documents` archivado en sitio en migración 0010, endpoints legacy responden HTTP 410 Gone), AE assignments, per-client `form_config` |
 | `candidates` | `src/modules/candidates/` | Registration with duplicate warning + privacy acknowledgement, 14-state FSM with role gating, R2 attachments (server-proxied upload, see ADR-002), admin reactivation (FR-038a), rejection/decline categories, retention-review compliance surface (FR-003a), append-only audit writes |
 | `password-reset` | `src/modules/password-reset/` | Self-service reset (feature 009): public `POST /api/auth/password-reset/{request,confirm}`, KV-backed per-email rate-limit (`PASSWORD_RESET_RATE`), enumeration-safe response shape, 30-min single-use tokens, refresh-token revoke + lockout-clear inside the confirm transaction, audit writes only on success branches. Daily cleanup cron lives in `src/scheduled.ts`. See ADR-009. |
 

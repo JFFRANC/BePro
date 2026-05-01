@@ -17,6 +17,14 @@ src/modules/candidates/
 └── services/      # API client functions
 ```
 
+### Module map (recent additions)
+
+- `clients/components/PositionForm.tsx` — perfil completo de puesto en 7 secciones (acordeón shadcn). 011-US1.
+- `clients/components/PositionDocumentSlot.tsx` — slot por tipo (`contract`/`pase_visita`); subir / reemplazar / descargar / eliminar. 011-US2.
+- `clients/components/PositionVersionsPanel.tsx` — panel "Versiones" admin-only para archivados (FR-018). 011-US5.
+- `clients/pages/PositionDetailPage.tsx` — `/clients/:id/positions/:posId`; read-only para recruiter, edit para admin/manager/AE. 011.
+- `clients/components/DocumentManager.tsx` — **eliminado** en 011-US3 (los documentos viven ahora por puesto).
+
 ## Patterns
 
 ### Shared Components

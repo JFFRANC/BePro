@@ -1,4 +1,4 @@
-import { eq, and, ilike, sql, count, inArray } from "drizzle-orm";
+import { eq, and, ilike, sql, count, inArray, desc } from "drizzle-orm";
 import type { Database } from "@bepro/db";
 import {
   clients,
@@ -6,10 +6,23 @@ import {
   clientContacts,
   clientPositions,
   clientDocuments,
+  clientPositionDocuments,
   users,
   auditEvents,
 } from "@bepro/db";
-import type { IClientFormConfig, IClientDto, IClientContactDto, IClientPositionDto, IClientDocumentDto, IClientAssignmentDto } from "@bepro/shared";
+import type {
+  IClientFormConfig,
+  IClientDto,
+  IClientContactDto,
+  IClientPositionDto,
+  IClientDocumentDto,
+  IClientAssignmentDto,
+  IPositionDocumentDto,
+  PositionDocumentType,
+  CreatePositionProfileInput,
+  UpdatePositionProfileInput,
+  CreatePositionDocumentInput,
+} from "@bepro/shared";
 import type { CreateClientInput, UpdateClientInput, ListClientsInput } from "./types.js";
 
 // -- Helpers --
@@ -53,7 +66,10 @@ function toContactDto(row: typeof clientContacts.$inferSelect): IClientContactDt
   };
 }
 
-function toPositionDto(row: typeof clientPositions.$inferSelect): IClientPositionDto {
+function toPositionDto(
+  row: typeof clientPositions.$inferSelect,
+  documents?: IClientPositionDto["documents"],
+): IClientPositionDto {
   return {
     id: row.id,
     clientId: row.clientId,
@@ -61,7 +77,86 @@ function toPositionDto(row: typeof clientPositions.$inferSelect): IClientPositio
     isActive: row.isActive,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+    vacancies: row.vacancies ?? null,
+    workLocation: row.workLocation ?? null,
+    ageMin: row.ageMin ?? null,
+    ageMax: row.ageMax ?? null,
+    gender: row.gender ?? null,
+    civilStatus: row.civilStatus ?? null,
+    educationLevel: row.educationLevel ?? null,
+    experienceText: row.experienceText ?? null,
+    salaryAmount:
+      row.salaryAmount !== null && row.salaryAmount !== undefined
+        ? Number(row.salaryAmount)
+        : null,
+    // La columna DB es varchar(3) y puede contener filas legacy con cualquier
+    // string. El schema shared restringe a "MXN" | "USD" | "EUR"; cast aquí
+    // para alinear con el DTO. Filas con un código fuera del enum aún se
+    // sirven como string crudo, pero el TS-side no narra valores inválidos.
+    salaryCurrency:
+      (row.salaryCurrency as IClientPositionDto["salaryCurrency"]) ?? null,
+    paymentFrequency: row.paymentFrequency ?? null,
+    salaryNotes: row.salaryNotes ?? null,
+    benefits: row.benefits ?? null,
+    scheduleText: row.scheduleText ?? null,
+    workDays:
+      (row.workDays as IClientPositionDto["workDays"] | null | undefined) ??
+      null,
+    shift: row.shift ?? null,
+    requiredDocuments: row.requiredDocuments ?? null,
+    responsibilities: row.responsibilities ?? null,
+    faq: row.faq ?? null,
+    documents: documents ?? {},
   };
+}
+
+function toPositionDocumentDto(
+  row: typeof clientPositionDocuments.$inferSelect,
+  uploaderName?: string,
+): IPositionDocumentDto {
+  return {
+    id: row.id,
+    positionId: row.positionId,
+    type: row.type,
+    originalName: row.originalName,
+    mimeType: row.mimeType,
+    sizeBytes: row.sizeBytes,
+    isActive: row.isActive,
+    uploadedAt: row.uploadedAt ? row.uploadedAt.toISOString() : null,
+    replacedAt: row.replacedAt ? row.replacedAt.toISOString() : null,
+    uploadedBy: row.uploadedBy,
+    uploaderName,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+// 011 — Errores específicos del feature
+export class InvalidAgeRangeError extends Error {
+  constructor() {
+    super("INVALID_AGE_RANGE");
+    this.name = "InvalidAgeRangeError";
+  }
+}
+
+export class PositionDocumentNotFoundError extends Error {
+  constructor() {
+    super("POSITION_DOCUMENT_NOT_FOUND");
+    this.name = "PositionDocumentNotFoundError";
+  }
+}
+
+export class PositionDocumentMimeError extends Error {
+  constructor() {
+    super("POSITION_DOCUMENT_MIME");
+    this.name = "PositionDocumentMimeError";
+  }
+}
+
+export class PositionDocumentSizeError extends Error {
+  constructor() {
+    super("POSITION_DOCUMENT_SIZE");
+    this.name = "PositionDocumentSizeError";
+  }
 }
 
 async function createAuditEvent(
@@ -1061,15 +1156,115 @@ export async function deleteContact(
   return true;
 }
 
-// -- Positions --
+// -- Positions (011-puestos-profile-docs — perfil completo) --
+
+// Mapeo declarativo de campo Zod → columna de DB (para diff y persistencia).
+const POSITION_PROFILE_FIELDS = [
+  "vacancies",
+  "workLocation",
+  "ageMin",
+  "ageMax",
+  "gender",
+  "civilStatus",
+  "educationLevel",
+  "experienceText",
+  "salaryAmount",
+  "salaryCurrency",
+  "paymentFrequency",
+  "salaryNotes",
+  "benefits",
+  "scheduleText",
+  "workDays",
+  "shift",
+  "requiredDocuments",
+  "responsibilities",
+  "faq",
+] as const;
+
+type PositionProfileField = (typeof POSITION_PROFILE_FIELDS)[number];
+
+// Defensa en profundidad: además de Zod y del CHECK constraint, validamos
+// `ageMin <= ageMax` en el servicio para que el error sea tipado y aterrice
+// como 400 estructurado en routes.ts.
+function assertAgeRange(input: {
+  ageMin?: number | null | undefined;
+  ageMax?: number | null | undefined;
+}) {
+  if (
+    input.ageMin !== null &&
+    input.ageMin !== undefined &&
+    input.ageMax !== null &&
+    input.ageMax !== undefined &&
+    input.ageMin > input.ageMax
+  ) {
+    throw new InvalidAgeRangeError();
+  }
+}
+
+// Convierte el payload del request al shape esperado por Drizzle. `null`
+// significa “limpiar”; `undefined` significa “no tocar” (en update).
+function profileInputToInsert(
+  input: CreatePositionProfileInput | UpdatePositionProfileInput,
+) {
+  const out: Record<string, unknown> = {};
+  for (const field of POSITION_PROFILE_FIELDS) {
+    const value = (input as Record<string, unknown>)[field];
+    if (value === undefined) continue;
+    if (field === "salaryAmount") {
+      out[field] = value === null ? null : String(value);
+    } else {
+      out[field] = value;
+    }
+  }
+  return out;
+}
+
+// Snapshot completo de los campos de perfil para el evento `client_position.create`.
+function profileSnapshotFromRow(
+  row: typeof clientPositions.$inferSelect,
+): Record<string, unknown> {
+  const snapshot: Record<string, unknown> = {
+    clientId: row.clientId,
+    name: row.name,
+  };
+  for (const field of POSITION_PROFILE_FIELDS) {
+    const value = (row as Record<string, unknown>)[field];
+    if (value !== null && value !== undefined) {
+      snapshot[field] = value;
+    }
+  }
+  return snapshot;
+}
+
+// Diff entre fila previa y campos cambiados. Se usa para `client_position.update`.
+function diffProfile(
+  prev: typeof clientPositions.$inferSelect,
+  next: typeof clientPositions.$inferSelect,
+  changedFields: PositionProfileField[],
+  nameChanged: boolean,
+) {
+  const oldDiff: Record<string, unknown> = {};
+  const newDiff: Record<string, unknown> = {};
+  if (nameChanged) {
+    oldDiff.name = prev.name;
+    newDiff.name = next.name;
+  }
+  for (const field of changedFields) {
+    oldDiff[field] = (prev as Record<string, unknown>)[field] ?? null;
+    newDiff[field] = (next as Record<string, unknown>)[field] ?? null;
+  }
+  return { old: oldDiff, new: newDiff };
+}
 
 export async function createPosition(
   db: Database,
   tenantId: string,
   actorId: string,
   clientId: string,
-  input: { name: string },
+  input: CreatePositionProfileInput,
 ) {
+  assertAgeRange(input);
+
   // Verificar unicidad de nombre (solo activos)
   const [existing] = await db
     .select({ id: clientPositions.id })
@@ -1087,19 +1282,28 @@ export async function createPosition(
     throw new Error("POSITION_DUPLICATE");
   }
 
-  const [created] = await db
-    .insert(clientPositions)
-    .values({
-      tenantId,
-      clientId,
-      name: input.name,
-    })
-    .returning();
-
-  await createAuditEvent(db, tenantId, actorId, "create", "client_position", created.id, null, {
+  const insertValues = {
+    tenantId,
     clientId,
     name: input.name,
-  });
+    ...profileInputToInsert(input),
+  } as typeof clientPositions.$inferInsert;
+
+  const [created] = await db
+    .insert(clientPositions)
+    .values(insertValues)
+    .returning();
+
+  await createAuditEvent(
+    db,
+    tenantId,
+    actorId,
+    "create",
+    "client_position",
+    created.id,
+    null,
+    profileSnapshotFromRow(created),
+  );
 
   return toPositionDto(created);
 }
@@ -1120,7 +1324,71 @@ export async function listPositions(
     .where(and(...conditions))
     .orderBy(clientPositions.name);
 
-  return rows.map(toPositionDto);
+  if (rows.length === 0) return [];
+
+  // 011-US4 — Documents summary (active per type) en una sola query.
+  const positionIds = rows.map((r) => r.id);
+  const docRows = await db
+    .select({
+      id: clientPositionDocuments.id,
+      positionId: clientPositionDocuments.positionId,
+      type: clientPositionDocuments.type,
+    })
+    .from(clientPositionDocuments)
+    .where(
+      and(
+        inArray(clientPositionDocuments.positionId, positionIds),
+        eq(clientPositionDocuments.isActive, true),
+      ),
+    );
+
+  const summaryByPosition = new Map<string, IClientPositionDto["documents"]>();
+  for (const d of docRows) {
+    const cur = summaryByPosition.get(d.positionId) ?? {};
+    cur[d.type] = { id: d.id };
+    summaryByPosition.set(d.positionId, cur);
+  }
+
+  return rows.map((row) =>
+    toPositionDto(row, summaryByPosition.get(row.id) ?? {}),
+  );
+}
+
+export async function getPosition(
+  db: Database,
+  clientId: string,
+  positionId: string,
+): Promise<IClientPositionDto | null> {
+  const [row] = await db
+    .select()
+    .from(clientPositions)
+    .where(
+      and(
+        eq(clientPositions.id, positionId),
+        eq(clientPositions.clientId, clientId),
+      ),
+    )
+    .limit(1);
+
+  if (!row) return null;
+
+  const docRows = await db
+    .select({
+      id: clientPositionDocuments.id,
+      type: clientPositionDocuments.type,
+    })
+    .from(clientPositionDocuments)
+    .where(
+      and(
+        eq(clientPositionDocuments.positionId, positionId),
+        eq(clientPositionDocuments.isActive, true),
+      ),
+    );
+
+  const summary: IClientPositionDto["documents"] = {};
+  for (const d of docRows) summary[d.type] = { id: d.id };
+
+  return toPositionDto(row, summary);
 }
 
 export async function updatePosition(
@@ -1128,8 +1396,10 @@ export async function updatePosition(
   tenantId: string,
   actorId: string,
   positionId: string,
-  input: { name?: string },
+  input: UpdatePositionProfileInput,
 ) {
+  // Para validar age contra el estado final post-merge necesitamos cargar la
+  // fila previa primero (por si el cliente sólo manda uno de los dos campos).
   const [existing] = await db
     .select()
     .from(clientPositions)
@@ -1138,8 +1408,16 @@ export async function updatePosition(
 
   if (!existing) return null;
 
-  if (input.name && input.name !== existing.name) {
-    // Verificar unicidad del nuevo nombre
+  const finalAgeMin =
+    input.ageMin === undefined ? existing.ageMin : input.ageMin;
+  const finalAgeMax =
+    input.ageMax === undefined ? existing.ageMax : input.ageMax;
+  assertAgeRange({ ageMin: finalAgeMin, ageMax: finalAgeMax });
+
+  const nameChanged =
+    input.name !== undefined && input.name !== existing.name;
+
+  if (nameChanged && input.name) {
     const [dup] = await db
       .select({ id: clientPositions.id })
       .from(clientPositions)
@@ -1157,7 +1435,10 @@ export async function updatePosition(
     }
   }
 
-  const updateData: Record<string, unknown> = { updatedAt: new Date() };
+  const updateData: Record<string, unknown> = {
+    updatedAt: new Date(),
+    ...profileInputToInsert(input),
+  };
   if (input.name !== undefined) updateData.name = input.name;
 
   const [updated] = await db
@@ -1166,11 +1447,32 @@ export async function updatePosition(
     .where(eq(clientPositions.id, positionId))
     .returning();
 
-  await createAuditEvent(db, tenantId, actorId, "update", "client_position", positionId, {
-    name: existing.name,
-  }, {
-    name: updated.name,
-  });
+  // Computar diff sólo de los campos efectivamente cambiados.
+  const changedFields: PositionProfileField[] = [];
+  for (const field of POSITION_PROFILE_FIELDS) {
+    if ((input as Record<string, unknown>)[field] === undefined) continue;
+    const before = (existing as Record<string, unknown>)[field];
+    const after = (updated as Record<string, unknown>)[field];
+    const same =
+      Array.isArray(before) && Array.isArray(after)
+        ? JSON.stringify(before) === JSON.stringify(after)
+        : before === after;
+    if (!same) changedFields.push(field);
+  }
+
+  if (changedFields.length > 0 || nameChanged) {
+    const diff = diffProfile(existing, updated, changedFields, nameChanged);
+    await createAuditEvent(
+      db,
+      tenantId,
+      actorId,
+      "update",
+      "client_position",
+      positionId,
+      diff.old,
+      diff.new,
+    );
+  }
 
   return toPositionDto(updated);
 }
@@ -1200,7 +1502,461 @@ export async function deletePosition(
   return true;
 }
 
-// -- Documents --
+// ============================================================
+// Position Documents (011 / US2)
+// ============================================================
+//
+// Server-proxied upload (ADR-002):
+//   1) POST /…/documents — crea fila en `client_position_documents` con
+//      `uploaded_at = NULL` (draft). Retorna { id, uploadUrl, expiresAt }.
+//   2) POST /…/documents/:id/upload — recibe los bytes; archive-then-insert
+//      atómico de la fila previa activa; emite audit; tras commit: bucket.put.
+//   3) GET /…/documents/:id/download — proxy con permisos verificados.
+//   4) DELETE /…/documents/:id — soft-delete (admin only) + audit.
+
+import {
+  buildPositionStorageKey,
+  ALLOWED_MIME_TYPES,
+  MAX_POSITION_DOCUMENT_BYTES,
+  type AllowedMimeType,
+} from "./position-documents-storage.js";
+
+function isAllowedMime(m: string): m is AllowedMimeType {
+  return (ALLOWED_MIME_TYPES as readonly string[]).includes(m);
+}
+
+export interface CreatePositionDocumentRecordResult {
+  id: string;
+  uploadUrl: string;
+  expiresAt: string;
+}
+
+/**
+ * Step 1 of the upload flow — registra la fila en draft (uploaded_at NULL).
+ * No archiva la fila previa todavía: si el cliente abandona la subida, la
+ * vieja sigue activa hasta que llegan los bytes nuevos. La fila draft queda
+ * libre para que ADR-007 (orphan sweep) la limpie eventualmente.
+ */
+export async function createPositionDocumentRecord(
+  db: Database,
+  tenantId: string,
+  actorId: string,
+  clientId: string,
+  positionId: string,
+  input: CreatePositionDocumentInput,
+): Promise<CreatePositionDocumentRecordResult> {
+  // Verificar que la posición existe en este cliente (FR-016 — uniform 404)
+  const [pos] = await db
+    .select({ id: clientPositions.id })
+    .from(clientPositions)
+    .where(
+      and(
+        eq(clientPositions.id, positionId),
+        eq(clientPositions.clientId, clientId),
+      ),
+    )
+    .limit(1);
+  if (!pos) throw new PositionDocumentNotFoundError();
+
+  // Re-validate (defense in depth)
+  if (!isAllowedMime(input.mimeType)) throw new PositionDocumentMimeError();
+  if (input.sizeBytes > MAX_POSITION_DOCUMENT_BYTES)
+    throw new PositionDocumentSizeError();
+
+  const storageKey = buildPositionStorageKey({
+    tenantId,
+    positionId,
+    documentId: "PLACEHOLDER",
+    originalName: input.originalName,
+  });
+
+  const [row] = await db
+    .insert(clientPositionDocuments)
+    .values({
+      tenantId,
+      positionId,
+      type: input.type,
+      originalName: input.originalName,
+      mimeType: input.mimeType,
+      sizeBytes: input.sizeBytes,
+      // El storage_key real se actualiza en el upload (cuando ya tenemos `id`).
+      // Aquí guardamos un placeholder con el formato canónico para visibilidad.
+      storageKey: storageKey,
+      uploadedBy: actorId,
+      uploadedAt: null,
+      isActive: true,
+    } as typeof clientPositionDocuments.$inferInsert)
+    .returning();
+
+  // Reescribir storage_key con el id real ahora que existe.
+  const finalKey = buildPositionStorageKey({
+    tenantId,
+    positionId,
+    documentId: row.id,
+    originalName: input.originalName,
+  });
+  await db
+    .update(clientPositionDocuments)
+    .set({ storageKey: finalKey })
+    .where(eq(clientPositionDocuments.id, row.id));
+
+  // expiresAt en línea con la TTL del JWT — research §R1
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+  return {
+    id: row.id,
+    uploadUrl: `/api/clients/${clientId}/positions/${positionId}/documents/${row.id}/upload`,
+    expiresAt,
+  };
+}
+
+/**
+ * Helper transaccional — única ruta que voltea `is_active` a false.
+ * Archiva cualquier fila activa previa de (tenant, position, type) y
+ * confirma `uploaded_at` + `is_active = true` en la fila nueva. Atómico.
+ */
+async function replaceActivePositionDocument(
+  tx: Database,
+  tenantId: string,
+  positionId: string,
+  type: PositionDocumentType,
+  newRowId: string,
+): Promise<{ priorRow: typeof clientPositionDocuments.$inferSelect | null }> {
+  // Recoger fila previa activa (si existe).
+  const [prior] = await tx
+    .select()
+    .from(clientPositionDocuments)
+    .where(
+      and(
+        eq(clientPositionDocuments.tenantId, tenantId),
+        eq(clientPositionDocuments.positionId, positionId),
+        eq(clientPositionDocuments.type, type),
+        eq(clientPositionDocuments.isActive, true),
+        // No incluir la fila nueva — su uploaded_at es NULL aún
+        sql`${clientPositionDocuments.id} <> ${newRowId}`,
+      ),
+    )
+    .limit(1);
+
+  if (prior && prior.uploadedAt) {
+    // Solo archivamos filas previas que ya recibieron bytes (uploaded_at!=NULL).
+    // Filas en draft de otros intentos quedan vivas para que el sweep las limpie.
+    await tx
+      .update(clientPositionDocuments)
+      .set({
+        isActive: false,
+        replacedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(clientPositionDocuments.id, prior.id));
+  }
+
+  // Marcar fila nueva como uploaded.
+  await tx
+    .update(clientPositionDocuments)
+    .set({ uploadedAt: new Date(), updatedAt: new Date() })
+    .where(eq(clientPositionDocuments.id, newRowId));
+
+  return { priorRow: prior?.uploadedAt ? prior : null };
+}
+
+/**
+ * Step 2 — recibe los bytes, hace el replace transaccional, emite audit y
+ * (después del commit) escribe a R2.
+ */
+export async function uploadPositionDocumentBytes(
+  db: Database,
+  tenantId: string,
+  actorId: string,
+  bucket: R2Bucket,
+  clientId: string,
+  positionId: string,
+  documentId: string,
+  body: ArrayBuffer,
+  contentType: string,
+): Promise<IPositionDocumentDto> {
+  // Re-validar MIME y size desde headers + bytes
+  if (!isAllowedMime(contentType)) throw new PositionDocumentMimeError();
+  if (body.byteLength > MAX_POSITION_DOCUMENT_BYTES)
+    throw new PositionDocumentSizeError();
+
+  // Verificar que la fila draft existe en este tenant + posición + cliente
+  const [draft] = await db
+    .select({
+      id: clientPositionDocuments.id,
+      tenantId: clientPositionDocuments.tenantId,
+      positionId: clientPositionDocuments.positionId,
+      type: clientPositionDocuments.type,
+      originalName: clientPositionDocuments.originalName,
+      mimeType: clientPositionDocuments.mimeType,
+      sizeBytes: clientPositionDocuments.sizeBytes,
+      storageKey: clientPositionDocuments.storageKey,
+      uploadedBy: clientPositionDocuments.uploadedBy,
+      uploadedAt: clientPositionDocuments.uploadedAt,
+      replacedAt: clientPositionDocuments.replacedAt,
+      isActive: clientPositionDocuments.isActive,
+      createdAt: clientPositionDocuments.createdAt,
+      updatedAt: clientPositionDocuments.updatedAt,
+    })
+    .from(clientPositionDocuments)
+    .innerJoin(
+      clientPositions,
+      eq(clientPositionDocuments.positionId, clientPositions.id),
+    )
+    .where(
+      and(
+        eq(clientPositionDocuments.id, documentId),
+        eq(clientPositionDocuments.positionId, positionId),
+        eq(clientPositions.clientId, clientId),
+      ),
+    )
+    .limit(1);
+  if (!draft) throw new PositionDocumentNotFoundError();
+
+  // Distinguir create vs replace por la presencia de fila previa activa.
+  const [priorActive] = await db
+    .select({ id: clientPositionDocuments.id })
+    .from(clientPositionDocuments)
+    .where(
+      and(
+        eq(clientPositionDocuments.tenantId, tenantId),
+        eq(clientPositionDocuments.positionId, positionId),
+        eq(clientPositionDocuments.type, draft.type),
+        eq(clientPositionDocuments.isActive, true),
+        sql`${clientPositionDocuments.uploadedAt} IS NOT NULL`,
+        sql`${clientPositionDocuments.id} <> ${draft.id}`,
+      ),
+    )
+    .limit(1);
+
+  type PriorSnapshot = typeof clientPositionDocuments.$inferSelect | null;
+  const priorSnapshot: PriorSnapshot = await db.transaction(async (tx) => {
+    const { priorRow } = await replaceActivePositionDocument(
+      tx as unknown as Database,
+      tenantId,
+      positionId,
+      draft.type,
+      draft.id,
+    );
+    return priorRow;
+  });
+
+  // Audit fuera de la tx — la tx ya persistió el flip.
+  if (priorActive && priorSnapshot) {
+    await createAuditEvent(
+      db,
+      tenantId,
+      actorId,
+      "replace",
+      "position_document",
+      draft.id,
+      {
+        priorDocumentId: priorSnapshot.id,
+        priorReplacedAt: new Date().toISOString(),
+        priorOriginalName: priorSnapshot.originalName,
+        priorSizeBytes: priorSnapshot.sizeBytes,
+      },
+      {
+        positionId,
+        type: draft.type,
+        originalName: draft.originalName,
+        mimeType: draft.mimeType,
+        sizeBytes: draft.sizeBytes,
+        uploadedBy: actorId,
+      },
+    );
+  } else {
+    await createAuditEvent(db, tenantId, actorId, "create", "position_document", draft.id, null, {
+      positionId,
+      type: draft.type,
+      originalName: draft.originalName,
+      mimeType: draft.mimeType,
+      sizeBytes: draft.sizeBytes,
+      uploadedBy: actorId,
+    });
+  }
+
+  // Escritura a R2 después del commit (research §R3)
+  await bucket.put(draft.storageKey, body, {
+    httpMetadata: { contentType },
+  });
+
+  // Retornar el DTO con uploaded_at recién seteado.
+  const [refreshed] = await db
+    .select()
+    .from(clientPositionDocuments)
+    .where(eq(clientPositionDocuments.id, draft.id))
+    .limit(1);
+  return toPositionDocumentDto(refreshed);
+}
+
+export interface PositionDocumentDownloadStream {
+  body: ReadableStream<Uint8Array>;
+  contentType: string;
+  contentLength: number;
+  filename: string;
+}
+
+/**
+ * Stream de descarga.
+ * - Recruiter / AE / manager / admin pueden descargar el ACTIVO si la posición
+ *   está activa y tienen acceso al cliente (verificado en routes).
+ * - Sólo admin puede descargar archivados (`is_active=false`); para no-admin
+ *   un docId archivado responde 404 (uniform — FR-016).
+ * - Si la posición está inactiva (E-02 / FR-007), 404 para todos.
+ */
+export async function getPositionDocumentForDownload(
+  db: Database,
+  bucket: R2Bucket,
+  clientId: string,
+  positionId: string,
+  documentId: string,
+  role: string,
+): Promise<PositionDocumentDownloadStream | null> {
+  const [doc] = await db
+    .select({
+      id: clientPositionDocuments.id,
+      positionId: clientPositionDocuments.positionId,
+      type: clientPositionDocuments.type,
+      originalName: clientPositionDocuments.originalName,
+      mimeType: clientPositionDocuments.mimeType,
+      sizeBytes: clientPositionDocuments.sizeBytes,
+      storageKey: clientPositionDocuments.storageKey,
+      isActive: clientPositionDocuments.isActive,
+      positionIsActive: clientPositions.isActive,
+    })
+    .from(clientPositionDocuments)
+    .innerJoin(
+      clientPositions,
+      eq(clientPositionDocuments.positionId, clientPositions.id),
+    )
+    .where(
+      and(
+        eq(clientPositionDocuments.id, documentId),
+        eq(clientPositionDocuments.positionId, positionId),
+        eq(clientPositions.clientId, clientId),
+      ),
+    )
+    .limit(1);
+
+  if (!doc) return null;
+
+  // FR-007 / E-02 — posición soft-deleted: 404 para todos
+  if (!doc.positionIsActive) return null;
+
+  // Archivado + no-admin → 404
+  if (!doc.isActive && role !== "admin") return null;
+
+  const obj = await bucket.get(doc.storageKey);
+  if (!obj) return null;
+
+  return {
+    body: obj.body,
+    contentType: doc.mimeType,
+    contentLength: doc.sizeBytes,
+    filename: doc.originalName,
+  };
+}
+
+/**
+ * Soft-delete (admin only) — flippea is_active=false sin successor.
+ */
+export async function softDeletePositionDocument(
+  db: Database,
+  tenantId: string,
+  actorId: string,
+  clientId: string,
+  positionId: string,
+  documentId: string,
+): Promise<boolean> {
+  const [doc] = await db
+    .select({
+      id: clientPositionDocuments.id,
+      type: clientPositionDocuments.type,
+      originalName: clientPositionDocuments.originalName,
+      isActive: clientPositionDocuments.isActive,
+    })
+    .from(clientPositionDocuments)
+    .innerJoin(
+      clientPositions,
+      eq(clientPositionDocuments.positionId, clientPositions.id),
+    )
+    .where(
+      and(
+        eq(clientPositionDocuments.id, documentId),
+        eq(clientPositionDocuments.positionId, positionId),
+        eq(clientPositions.clientId, clientId),
+      ),
+    )
+    .limit(1);
+
+  if (!doc || !doc.isActive) return false;
+
+  await db
+    .update(clientPositionDocuments)
+    .set({
+      isActive: false,
+      replacedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(clientPositionDocuments.id, documentId));
+
+  await createAuditEvent(
+    db,
+    tenantId,
+    actorId,
+    "delete",
+    "position_document",
+    documentId,
+    {
+      positionId,
+      type: doc.type,
+      originalName: doc.originalName,
+    },
+    null,
+  );
+  return true;
+}
+
+/**
+ * 011 / US5 (FR-018) — listar archivados (admin only).
+ */
+export async function listArchivedPositionDocuments(
+  db: Database,
+  clientId: string,
+  positionId: string,
+  typeFilter?: PositionDocumentType,
+): Promise<IPositionDocumentDto[]> {
+  // Verificar que la posición pertenece al cliente
+  const [pos] = await db
+    .select({ id: clientPositions.id })
+    .from(clientPositions)
+    .where(
+      and(
+        eq(clientPositions.id, positionId),
+        eq(clientPositions.clientId, clientId),
+      ),
+    )
+    .limit(1);
+  if (!pos) return [];
+
+  const conditions = [
+    eq(clientPositionDocuments.positionId, positionId),
+    eq(clientPositionDocuments.isActive, false),
+  ];
+  if (typeFilter) {
+    conditions.push(eq(clientPositionDocuments.type, typeFilter));
+  }
+
+  const rows = await db
+    .select()
+    .from(clientPositionDocuments)
+    .where(and(...conditions))
+    .orderBy(desc(clientPositionDocuments.replacedAt));
+
+  return rows.map((r) => toPositionDocumentDto(r));
+}
+
+// -- Legacy Client Documents --
 
 export async function createDocumentRecord(
   db: Database,
